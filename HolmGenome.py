@@ -38,6 +38,7 @@ def main():
     ]
 
     # Call the QC main function with the arguments
+    print("Starting QC:\n")
     qc_main(qc_args)
 
 if __name__ == "__main__":
