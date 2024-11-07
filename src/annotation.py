@@ -1,9 +1,9 @@
-# src/annotation.py
+# src/Annotation.py
 
-import os
 import subprocess
 import logging
 import argparse
+import os
 import sys
 import glob
 
@@ -14,70 +14,52 @@ def setup_logging():
 def run_subprocess(cmd, log_file):
     logging.info(f'Running command: {" ".join(cmd)}')
     with open(log_file, 'a') as f:
-        result = subprocess.run(cmd, stdout=f, stderr=subprocess.STDOUT, text=True)
+        result = subprocess.run(cmd, stdout=f, stderr=subprocess.STDOUT)
     if result.returncode != 0:
         logging.error(f'Command failed: {" ".join(cmd)}')
         sys.exit(f'Error: Command failed. Check {log_file} for details.')
 
-def run_prokka(fasta_file, output_dir, prefix='annotation', prokka_path='prokka', prokka_options=None):
+def run_prokka(fasta_file, output_dir, prefix='annotation', prokka_options=None):
     """
     Run Prokka on a specified FASTA file.
-
+    
     Parameters:
     - fasta_file (str): Path to the FASTA file.
     - output_dir (str): Directory where Prokka output should be stored.
     - prefix (str): Prefix for output files.
-    - prokka_path (str): Path to the Prokka executable.
-    - prokka_options (list): Additional options for Prokka.
+    - prokka_options (list): Additional command-line options for Prokka.
     """
     prokka_options = prokka_options or []
-    try:
-        # Command to run Prokka
-        command = [
-            prokka_path,
-            '--outdir', output_dir,
-            '--prefix', prefix,
-            fasta_file
-        ] + prokka_options
+    cmd = [
+        'prokka',
+        '--outdir', output_dir,
+        '--prefix', prefix,
+        fasta_file
+    ] + prokka_options
+    run_subprocess(cmd, 'prokka_output.log')
 
-        # Execute the command
-        run_subprocess(command, 'prokka_output.log')
-
-        logging.info(f"Prokka finished successfully for {fasta_file}")
-
-    except Exception as e:
-        logging.error(f"An error occurred while running Prokka: {e}")
-        sys.exit(1)
-
-def annotate_contigs(contigs_dir, annotation_output_dir, prokka_path='prokka'):
+def annotate_contigs(filtered_contigs_dir, annotation_output_dir):
     """
-    Run Prokka on all FASTA files in the contigs directory.
-
-    Parameters:
-    - contigs_dir (str): Directory containing contigs FASTA files.
-    - annotation_output_dir (str): Directory to store Prokka outputs.
-    - prokka_path (str): Path to the Prokka executable.
+    Annotate all contig files in the filtered contigs directory using Prokka.
     """
-    fasta_files = glob.glob(os.path.join(contigs_dir, '*.fasta'))
-    if not fasta_files:
-        logging.error(f"No FASTA files found in {contigs_dir}")
-        sys.exit(1)
+    os.makedirs(annotation_output_dir, exist_ok=True)
+    fasta_files = glob.glob(os.path.join(filtered_contigs_dir, '*.fasta'))
     for fasta_file in fasta_files:
-        sample_name = os.path.splitext(os.path.basename(fasta_file))[0]
+        sample_name = os.path.basename(fasta_file).split('.')[0]
         sample_output_dir = os.path.join(annotation_output_dir, sample_name)
         os.makedirs(sample_output_dir, exist_ok=True)
-        run_prokka(fasta_file, sample_output_dir, prefix=sample_name, prokka_path=prokka_path)
+        run_prokka(fasta_file, sample_output_dir, prefix=sample_name)
 
 def main(args=None):
-    parser = argparse.ArgumentParser(description='Annotation Pipeline using Prokka')
-    parser.add_argument('--contigs_dir', required=True, help='Directory containing contigs FASTA files')
-    parser.add_argument('--annotation_output_dir', required=True, help='Directory to store Prokka outputs')
-    parser.add_argument('--prokka_path', default='prokka', help='Path to the Prokka executable')
+    parser = argparse.ArgumentParser(description='Genome Annotation Pipeline')
+    parser.add_argument('--filtered_contigs_dir', required=True, help='Path to the filtered contigs directory')
+    parser.add_argument('--annotation_output_dir', required=True, help='Directory to store annotation results')
+    # Add other optional arguments as needed
     args = parser.parse_args(args)
 
     setup_logging()
 
-    annotate_contigs(args.contigs_dir, args.annotation_output_dir, prokka_path=args.prokka_path)
+    annotate_contigs(args.filtered_contigs_dir, args.annotation_output_dir)
 
 if __name__ == "__main__":
     main()
