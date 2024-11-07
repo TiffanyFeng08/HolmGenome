@@ -1,0 +1,12 @@
+# Please modify the paths according to your own environment.
+base_dir: '/path/to/base'
+input_dir: '/path/to/raw_data'
+output_dir: '/path/to/QC_output'
+trimmed_data_path: '/path/to/Trim_data'
+trimmomatic_path: '/path/to/trimmomatic.jar'
+adapters_path: '/path/to/adapters.fa'
+fastqc_path: '/usr/local/bin/fastqc'
+multiqc_path: '/usr/local/bin/multiqc'
+min_contig_length: 1000
+filtered_contigs_dir: '/path/to/Assembly/contigs/filtered_contigs'
+annotation_output_dir: '/path/to/Annotation'
