@@ -10,8 +10,8 @@ src_dir = os.path.join(current_dir, 'src')
 sys.path.append(src_dir)
 
 # Import the main functions from QC.py and Assembly.py
-from QC import main as qc_main
-from Assembly import main as assembly_main
+from qc import main as qc_main
+from assembly import main as assembly_main
 
 # List of tools to check
 tools = ["fastqc", "multiqc", "trimmomatic", "spades.py", "prokka", "checkm"]
