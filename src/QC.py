@@ -130,20 +130,34 @@ def process_samples(args, paired_files):
         else:
             logging.warning(f'Missing pair for sample {sample}')
 
+
 def main(args=None):
-    parser = argparse.ArgumentParser(description='Quality Control Pipeline')
+    parser = argparse.ArgumentParser()
     parser.add_argument('--input_dir', required=True, help='Path to the input directory')
     parser.add_argument('--output_dir', required=True, help='Path to the output directory')
     parser.add_argument('--trimmomatic_path', required=True, help='Path to the Trimmomatic jar file')
     parser.add_argument('--adapters_path', required=True, help='Path to the adapters file')
+    parser.add_argument('--illuminaclip', default='2:30:10', help='ILLUMINACLIP option for Trimmomatic')
+    parser.add_argument('--slidingwindow', default='4:15', help='SLIDINGWINDOW option for Trimmomatic')
+    parser.add_argument('--leading', default='3', help='LEADING option for Trimmomatic')
+    parser.add_argument('--trailing', default='3', help='TRAILING option for Trimmomatic')
+    parser.add_argument('--crop', default=None, help='CROP option for Trimmomatic')
+    parser.add_argument('--headcrop', default=None, help='HEADCROP option for Trimmomatic')
+    parser.add_argument('--minlen', default='36', help='MINLEN option')
+    parser.add_argument('--suffix1', default='_R1_001.fastq.gz', help='Suffix for the first file in each pair')
+    parser.add_argument('--suffix2', default='_R2_001.fastq.gz', help='Suffix for the second file in each pair')
     parser.add_argument('--bbduk', action='store_true', help='Use BBDuk for processing')
-    parser.add_argument('--bbduk_path', help='Path to the BBDuk executable')
+    parser.add_argument('--bbduk_path', required=False, help='Path to the BBDuk executable')
+    parser.add_argument('--ktrim', default='r', help='KTRIM option for BBDuk')
+    parser.add_argument('--k', default='23', help='K option for BBDuk')
+    parser.add_argument('--mink', default='11', help='MINK option for BBDuk')
+    parser.add_argument('--hdist', default='1', help='HDIST option for BBDuk')
+    parser.add_argument('--tpe', default='t', help='TPE option for BBDuk')
+    parser.add_argument('--tbo', default='t', help='TBO option for BBDuk')
+    parser.add_argument('--qtrim', default='rl', help='QTRIM option for BBDuk')
+    parser.add_argument('--trimq', default='10', help='TRIMQ option for BBDuk')
     parser.add_argument('--fastqc_path', default='fastqc', help='Path to the FastQC executable')
     parser.add_argument('--multiqc_path', default='multiqc', help='Path to the MultiQC executable')
-    # Additional optional arguments...
-    # For brevity, only including essential ones
-    parser.add_argument('--suffix1', default='_R1_001.fastq.gz', help='Suffix for the first read file')
-    parser.add_argument('--suffix2', default='_R2_001.fastq.gz', help='Suffix for the second read file')
 
     # Parse arguments
     args = parser.parse_args(args)
