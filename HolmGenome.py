@@ -109,9 +109,6 @@ def check_required_tools(tools):
     logging.info('Tool check completed.')
 
 def main():
-    """
-    Main function to execute the genome analysis pipeline.
-    """
     parser = argparse.ArgumentParser(description='HolmGenome Pipeline')
     parser.add_argument('--config', default='config.yaml', help='Path to the configuration file')
     parser.add_argument('--log_level', default='INFO', help='Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)')
