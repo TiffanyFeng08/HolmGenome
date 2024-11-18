@@ -6,7 +6,7 @@ trimmed_data_path: '/path/to/Trim_data'
 trimmomatic_path: '$EBROOTTRIMMOMATIC/trimmomatic-0.39.jar'
 adapters_path: '/path/to/adapters.fa'
 fastqc_path: 'fastqc'
-multiqc_path: '/usr/local/bin/multiqc'
+multiqc_path: 'multiqc'
 min_contig_length: 1000
 filtered_contigs_dir: '/path/to/Assembly/contigs/filtered_contigs'
 annotation_output_dir: '/path/to/Annotation'
