@@ -143,14 +143,15 @@ def main():
     check_required_tools(tools)
 
     try:
-        # Prepare arguments for QC.py
+        # Prepare arguments for qc.py
         qc_args = [
             '--input_dir', config['input_dir'],
             '--output_dir', config['output_dir'],
             '--trimmomatic_path', config['trimmomatic_path'],
             '--adapters_path', config['adapters_path'],
             '--fastqc_path', config.get('fastqc_path', 'fastqc'),
-            '--multiqc_path', config.get('multiqc_path', 'multiqc')
+            '--multiqc_path', config.get('multiqc_path', 'multiqc'),
+            '--prokka_path', config.get('prokka_path', 'prokka')
             # Include additional arguments from config if needed
         ]
 
