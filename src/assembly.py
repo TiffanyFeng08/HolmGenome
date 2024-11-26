@@ -163,13 +163,13 @@ def main(args=None):
     run_quast(filtered_contigs_dir, filtered_quast_dir, quast_path=args.quast_path)
 
     # Generate MultiQC report for QUAST results
-    run_multiqc(quast_dir, multi_quast_dir, multiqc_path=args.multiqc_path)
+    #run_multiqc(quast_dir, multi_quast_dir, multiqc_path=args.multiqc_path)
 
     # Run BBMap to calculate coverage
     run_bbmap(trimmed_data_path, filtered_contigs_dir, coverage_dir, bbmap_path=args.bbmap_path)
 
     # Generate MultiQC report for BBMap coverage results
-    run_multiqc(coverage_dir, multi_coverage_dir, multiqc_path=args.multiqc_path)
+    #run_multiqc(coverage_dir, multi_coverage_dir, multiqc_path=args.multiqc_path)
 
 if __name__ == "__main__":
     main()
