@@ -157,7 +157,7 @@ def main(args=None):
     parser.add_argument('--qtrim', default='rl', help='QTRIM option for BBDuk')
     parser.add_argument('--trimq', default='10', help='TRIMQ option for BBDuk')
     parser.add_argument('--fastqc_path', default='fastqc', help='Path to the FastQC executable')
-    parser.add_argument('--multiqc_path', default='multiqc', help='Path to the MultiQC executable')
+   # parser.add_argument('--multiqc_path', default='multiqc', help='Path to the MultiQC executable')
 
     # Parse arguments
     args = parser.parse_args(args)
@@ -174,11 +174,11 @@ def main(args=None):
     trimmed_data_qc_dir = os.path.join(args.output_dir, 'QC', 'Trim')
 
     run_fastqc(args.fastqc_path, args.input_dir, raw_data_qc_dir)
-    run_multiqc(args.multiqc_path, raw_data_qc_dir)
+   # run_multiqc(args.multiqc_path, raw_data_qc_dir)
 
     trimmed_data_path = os.path.join(args.output_dir, 'Trim_data')
     run_fastqc(args.fastqc_path, trimmed_data_path, trimmed_data_qc_dir)
-    run_multiqc(args.multiqc_path, trimmed_data_qc_dir)
+   # run_multiqc(args.multiqc_path, trimmed_data_qc_dir)
 
 if __name__ == "__main__":
     main()

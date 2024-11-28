@@ -129,7 +129,7 @@ def main():
     # List of tools to check
     tools = [
         config.get('fastqc_path', 'fastqc'),
-        config.get('multiqc_path', 'multiqc'),
+     #   config.get('multiqc_path', 'multiqc'),
         'java',  # For Trimmomatic
         'spades.py',
         'prokka',
@@ -150,7 +150,7 @@ def main():
             '--trimmomatic_path', config['trimmomatic_path'],
             '--adapters_path', config['adapters_path'],
             '--fastqc_path', config.get('fastqc_path', 'fastqc'),
-            '--multiqc_path', config.get('multiqc_path', 'multiqc'),
+          #  '--multiqc_path', config.get('multiqc_path', 'multiqc'),
             '--prokka_path', config.get('prokka_path', 'prokka')
             # Include additional arguments from config if needed
         ]
