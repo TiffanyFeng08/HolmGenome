@@ -78,7 +78,7 @@ def check_tool(tool):
     """
     try:
         result = subprocess.run(
-            [tool, "--version"],
+            [tool, "-h"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True
