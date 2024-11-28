@@ -82,10 +82,10 @@ def run_quast(contigs_dir, output_dir, quast_path='quast'):
     cmd = [quast_path] + contig_files + ['-o', output_dir]
     run_subprocess(cmd, 'quast_output.log')
 
-def run_multiqc(input_dir, output_dir, multiqc_path='multiqc'):
-    os.makedirs(output_dir, exist_ok=True)
-    cmd = [multiqc_path, input_dir, '-o', output_dir]
-    run_subprocess(cmd, 'multiqc_output.log')
+# def run_multiqc(input_dir, output_dir, multiqc_path='multiqc'):
+#     os.makedirs(output_dir, exist_ok=True)
+#     cmd = [multiqc_path, input_dir, '-o', output_dir]
+#     run_subprocess(cmd, 'multiqc_output.log')
 
 def run_bbmap(trimmed_data_path, filtered_contigs_dir, coverage_dir, bbmap_path='bbmap.sh'):
     paired_files = pair_fastq_files(trimmed_data_path, '_R1_001_paired.fastq.gz', '_R2_001_paired.fastq.gz')
@@ -118,7 +118,7 @@ def main(args=None):
     parser.add_argument('--spades_path', default='spades.py', help='Path to SPAdes executable')
     parser.add_argument('--reformat_path', default='reformat.sh', help='Path to reformat.sh script')
     parser.add_argument('--quast_path', default='quast', help='Path to QUAST executable')
-    parser.add_argument('--multiqc_path', default='multiqc', help='Path to MultiQC executable')
+    #parser.add_argument('--multiqc_path', default='multiqc', help='Path to MultiQC executable')
     parser.add_argument('--bbmap_path', default='bbmap.sh', help='Path to BBMap executable')
     parser.add_argument('--minlength', default=1000, type=int, help='Minimum length of contigs to keep')
     args = parser.parse_args(args)
