@@ -1,4 +1,4 @@
-# src/Assembly.py
+# src/assembly.py
 
 import os
 import subprocess
@@ -82,11 +82,6 @@ def run_quast(contigs_dir, output_dir, quast_path='quast'):
     cmd = [quast_path] + contig_files + ['-o', output_dir]
     run_subprocess(cmd, 'quast_output.log')
 
-# def run_multiqc(input_dir, output_dir, multiqc_path='multiqc'):
-#     os.makedirs(output_dir, exist_ok=True)
-#     cmd = [multiqc_path, input_dir, '-o', output_dir]
-#     run_subprocess(cmd, 'multiqc_output.log')
-
 def run_bbmap(trimmed_data_path, filtered_contigs_dir, coverage_dir, bbmap_path='bbmap.sh'):
     paired_files = pair_fastq_files(trimmed_data_path, '_R1_001_paired.fastq.gz', '_R2_001_paired.fastq.gz')
     for sample, files in paired_files.items():
@@ -116,11 +111,16 @@ def main(args=None):
     parser = argparse.ArgumentParser(description='Genome Assembly Pipeline')
     parser.add_argument('--base_dir', required=True, help='Base directory for the pipeline')
     parser.add_argument('--spades_path', default='spades.py', help='Path to SPAdes executable')
-    parser.add_argument('--reformat_path', default='reformat.sh', help='Path to reformat.sh script')
     parser.add_argument('--quast_path', default='quast', help='Path to QUAST executable')
-    #parser.add_argument('--multiqc_path', default='multiqc', help='Path to MultiQC executable')
     parser.add_argument('--bbmap_path', default='bbmap.sh', help='Path to BBMap executable')
     parser.add_argument('--minlength', default=1000, type=int, help='Minimum length of contigs to keep')
+
+    # Get the directory of this script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    # Set the default reformat_path to the reformat.sh in the src directory
+    reformat_default_path = os.path.join(script_dir, 'reformat.sh')
+    parser.add_argument('--reformat_path', default=reformat_default_path, help='Path to reformat.sh script')
+
     args = parser.parse_args(args)
 
     setup_logging()
@@ -162,14 +162,8 @@ def main(args=None):
     # Run QUAST on filtered contigs
     run_quast(filtered_contigs_dir, filtered_quast_dir, quast_path=args.quast_path)
 
-    # Generate MultiQC report for QUAST results
-    #run_multiqc(quast_dir, multi_quast_dir, multiqc_path=args.multiqc_path)
-
     # Run BBMap to calculate coverage
     run_bbmap(trimmed_data_path, filtered_contigs_dir, coverage_dir, bbmap_path=args.bbmap_path)
-
-    # Generate MultiQC report for BBMap coverage results
-    #run_multiqc(coverage_dir, multi_coverage_dir, multiqc_path=args.multiqc_path)
 
 if __name__ == "__main__":
     main()

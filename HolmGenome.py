@@ -6,7 +6,7 @@ This script orchestrates the genome analysis pipeline, including quality control
 assembly, and annotation steps. It reads configuration parameters from a YAML file,
 checks for the required tools, and executes each step while handling exceptions
 and logging the process.
-
+authors: Tiffany Feng, Zhangbin Cai, Sam Nguyen (2024)
 Usage:
     python HolmGenome.py --config config.yaml
 """
