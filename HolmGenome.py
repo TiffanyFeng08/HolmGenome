@@ -46,30 +46,6 @@ def setup_logging(log_level=logging.INFO):
     console.setFormatter(formatter)
     logging.getLogger().addHandler(console)
 
-def load_config(config_file=None):
-    """
-    Load configuration parameters from a YAML file.
-
-    Parameters:
-    - config_file (str): Path to the configuration YAML file.
-
-    Returns:
-    - config (dict): Dictionary containing configuration parameters.
-    """
-    config = {}
-    if config_file:
-        try:
-            with open(config_file, 'r') as f:
-                config = yaml.safe_load(f)
-            logging.info('Configuration loaded successfully.')
-        except FileNotFoundError:
-            logging.error(f'Configuration file {config_file} not found.')
-            sys.exit(f'Error: Configuration file {config_file} not found.')
-        except yaml.YAMLError as e:
-            logging.error(f'Error parsing configuration file: {e}')
-            sys.exit('Error: Invalid YAML syntax in configuration file.')
-    return config
-
 def check_tool(tool):
     """
     Check if a tool is installed and accessible in the system PATH or at a specified path.
@@ -125,7 +101,7 @@ def check_required_tools(tools):
     logging.info('Checking required tools...')
     for tool in tools:
         check_tool(tool)
-    logging.info('Tool check completed.')
+    logging.info('All required tools are installed and accessible.')
 
 def main():
     parser = argparse.ArgumentParser(description='HolmGenome Pipeline')
@@ -134,13 +110,6 @@ def main():
     parser.add_argument('--output_dir', help='Path to the output directory')
     parser.add_argument('--log_level', default='INFO', help='Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)')
     args = parser.parse_args()
-
-    # Show help message and prompt for input/output directories if no arguments are provided
-    if len(sys.argv) == 1:
-        parser.print_help()
-        print("\nNo arguments were provided. Please enter the required information.\n")
-        args.input_dir = input('Please enter the input directory: ').strip()
-        args.output_dir = input('Please enter the output directory: ').strip()
 
     # Setup logging
     numeric_level = getattr(logging, args.log_level.upper(), None)
@@ -151,30 +120,9 @@ def main():
 
     logging.info('Starting HolmGenome pipeline.')
 
-    # Load configuration
-    config = load_config(args.config)
-
-    # Update config with command-line arguments
-    if args.input_dir:
-        config['input_dir'] = args.input_dir
-    if args.output_dir:
-        config['output_dir'] = args.output_dir
-
-    # Check that required parameters are provided
-    required_params = ['input_dir', 'output_dir']
-    missing_params = [p for p in required_params if p not in config or not config[p]]
-    for param in missing_params:
-        config[param] = input(f'Please enter the {param}: ').strip()
-
-    # Verify that the required parameters are now present
-    missing_params = [p for p in required_params if p not in config or not config[p]]
-    if missing_params:
-        logging.error(f"Missing required parameters: {', '.join(missing_params)}")
-        sys.exit(f"Error: Missing required parameters: {', '.join(missing_params)}")
-
     # List of tools to check
     tools = [
-        config.get('fastqc_path', 'fastqc'),
+        'fastqc',
         'java',  # For Trimmomatic
         'spades.py',
         'prokka',
@@ -184,8 +132,33 @@ def main():
         'quast'
     ]
 
-    # Check for required tools
+    # Check for required tools before doing anything else
+    logging.info('Checking for required tools...')
     check_required_tools(tools)
+
+    # Load configuration
+    config = load_config(args.config)
+
+    # Merge command-line arguments into the configuration
+    if args.input_dir:
+        config['input_dir'] = args.input_dir
+    if args.output_dir:
+        config['output_dir'] = args.output_dir
+
+    # If no arguments are provided, prompt for input and output directories
+    if not config.get('input_dir') or not config.get('output_dir'):
+        print("Required directories not specified. Please provide them now.")
+        if not config.get('input_dir'):
+            config['input_dir'] = input("Enter the input directory: ").strip()
+        if not config.get('output_dir'):
+            config['output_dir'] = input("Enter the output directory: ").strip()
+
+    # Verify required parameters are present
+    required_params = ['input_dir', 'output_dir']
+    missing_params = [p for p in required_params if p not in config or not config[p]]
+    if missing_params:
+        logging.error(f"Missing required parameters: {', '.join(missing_params)}")
+        sys.exit(f"Error: Missing required parameters: {', '.join(missing_params)}")
 
     try:
         # Prepare arguments for qc.py
@@ -194,7 +167,6 @@ def main():
             '--output_dir', config['output_dir'],
             '--trimmomatic_path', config.get('trimmomatic_path', 'trimmomatic'),
             '--adapters_path', config.get('adapters_path', 'adapters.fa')
-            # Include additional arguments from config if needed
         ]
 
         logging.info('Starting Quality Control step.')
@@ -210,7 +182,6 @@ def main():
             '--bbmap_path', config.get('bbmap_path', 'bbmap.sh'),
             '--reformat_path', config.get('reformat_path', 'reformat.sh'),
             '--minlength', str(config.get('min_contig_length', 1000))
-            # Include additional arguments from config if needed
         ]
 
         logging.info('Starting Assembly step.')
@@ -222,7 +193,6 @@ def main():
         annotation_args = [
             '--filtered_contigs_dir', config.get('filtered_contigs_dir', 'path/to/filtered_contigs'),
             '--annotation_output_dir', config.get('annotation_output_dir', 'path/to/annotation_output')
-            # Include additional arguments from config if needed
         ]
 
         logging.info('Starting Annotation step.')
@@ -234,7 +204,31 @@ def main():
 
     except Exception as e:
         logging.exception('An exception occurred during pipeline execution.')
-        sys.exit(f'Error: {e}')
+        sys.exit(f"Error: {e}")
+
+def load_config(config_file=None):
+    """
+    Load configuration parameters from a YAML file.
+
+    Parameters:
+    - config_file (str): Path to the configuration YAML file.
+
+    Returns:
+    - config (dict): Dictionary containing configuration parameters.
+    """
+    config = {}
+    if config_file:
+        try:
+            with open(config_file, 'r') as f:
+                config = yaml.safe_load(f)
+            logging.info('Configuration loaded successfully.')
+        except FileNotFoundError:
+            logging.error(f'Configuration file {config_file} not found.')
+            sys.exit(f"Error: Configuration file {config_file} not found.")
+        except yaml.YAMLError as e:
+            logging.error(f"Error parsing configuration file: {e}")
+            sys.exit("Error: Invalid YAML syntax in configuration file.")
+    return config
 
 if __name__ == "__main__":
     main()
