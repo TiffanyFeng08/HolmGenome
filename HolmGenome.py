@@ -10,6 +10,7 @@ and logging the process.
 Usage:
     python HolmGenome.py --config config.yaml
 """
+
 import subprocess
 import sys
 import os
@@ -45,7 +46,7 @@ def setup_logging(log_level=logging.INFO):
     console.setFormatter(formatter)
     logging.getLogger().addHandler(console)
 
-def load_config(config_file='config.yaml'):
+def load_config(config_file=None):
     """
     Load configuration parameters from a YAML file.
 
@@ -55,17 +56,19 @@ def load_config(config_file='config.yaml'):
     Returns:
     - config (dict): Dictionary containing configuration parameters.
     """
-    try:
-        with open(config_file, 'r') as f:
-            config = yaml.safe_load(f)
-        logging.info('Configuration loaded successfully.')
-        return config
-    except FileNotFoundError:
-        logging.error(f'Configuration file {config_file} not found.')
-        sys.exit(f'Error: Configuration file {config_file} not found.')
-    except yaml.YAMLError as e:
-        logging.error(f'Error parsing configuration file: {e}')
-        sys.exit('Error: Invalid YAML syntax in configuration file.')
+    config = {}
+    if config_file:
+        try:
+            with open(config_file, 'r') as f:
+                config = yaml.safe_load(f)
+            logging.info('Configuration loaded successfully.')
+        except FileNotFoundError:
+            logging.error(f'Configuration file {config_file} not found.')
+            sys.exit(f'Error: Configuration file {config_file} not found.')
+        except yaml.YAMLError as e:
+            logging.error(f'Error parsing configuration file: {e}')
+            sys.exit('Error: Invalid YAML syntax in configuration file.')
+    return config
 
 def check_tool(tool):
     """
@@ -126,9 +129,18 @@ def check_required_tools(tools):
 
 def main():
     parser = argparse.ArgumentParser(description='HolmGenome Pipeline')
-    parser.add_argument('--config', default='config.yaml', help='Path to the configuration file')
+    parser.add_argument('--config', help='Path to the configuration file')
+    parser.add_argument('--input_dir', help='Path to the input directory')
+    parser.add_argument('--output_dir', help='Path to the output directory')
     parser.add_argument('--log_level', default='INFO', help='Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)')
     args = parser.parse_args()
+
+    # Show help message and prompt for input/output directories if no arguments are provided
+    if len(sys.argv) == 1:
+        parser.print_help()
+        print("\nNo arguments were provided. Please enter the required information.\n")
+        args.input_dir = input('Please enter the input directory: ').strip()
+        args.output_dir = input('Please enter the output directory: ').strip()
 
     # Setup logging
     numeric_level = getattr(logging, args.log_level.upper(), None)
@@ -142,8 +154,23 @@ def main():
     # Load configuration
     config = load_config(args.config)
 
-    # Full path to reformat.sh (if using local copy)
-    # reformat_path = os.path.join(src_dir, 'reformat.sh')
+    # Update config with command-line arguments
+    if args.input_dir:
+        config['input_dir'] = args.input_dir
+    if args.output_dir:
+        config['output_dir'] = args.output_dir
+
+    # Check that required parameters are provided
+    required_params = ['input_dir', 'output_dir']
+    missing_params = [p for p in required_params if p not in config or not config[p]]
+    for param in missing_params:
+        config[param] = input(f'Please enter the {param}: ').strip()
+
+    # Verify that the required parameters are now present
+    missing_params = [p for p in required_params if p not in config or not config[p]]
+    if missing_params:
+        logging.error(f"Missing required parameters: {', '.join(missing_params)}")
+        sys.exit(f"Error: Missing required parameters: {', '.join(missing_params)}")
 
     # List of tools to check
     tools = [
@@ -165,10 +192,8 @@ def main():
         qc_args = [
             '--input_dir', config['input_dir'],
             '--output_dir', config['output_dir'],
-            '--trimmomatic_path', config['trimmomatic_path'],
-            '--adapters_path', config['adapters_path'],
-            # '--fastqc_path', config.get('fastqc_path', 'fastqc'),
-            # '--prokka_path', config.get('prokka_path', 'prokka')
+            '--trimmomatic_path', config.get('trimmomatic_path', 'trimmomatic'),
+            '--adapters_path', config.get('adapters_path', 'adapters.fa')
             # Include additional arguments from config if needed
         ]
 
@@ -179,7 +204,7 @@ def main():
 
         # Prepare arguments for assembly.py
         assembly_args = [
-            '--base_dir', config['base_dir'],
+            '--base_dir', config.get('base_dir', '.'),
             '--spades_path', config.get('spades_path', 'spades.py'),
             '--quast_path', config.get('quast_path', 'quast'),
             '--bbmap_path', config.get('bbmap_path', 'bbmap.sh'),
@@ -195,8 +220,8 @@ def main():
 
         # Prepare arguments for annotation.py
         annotation_args = [
-            '--filtered_contigs_dir', config['filtered_contigs_dir'],
-            '--annotation_output_dir', config['annotation_output_dir']
+            '--filtered_contigs_dir', config.get('filtered_contigs_dir', 'path/to/filtered_contigs'),
+            '--annotation_output_dir', config.get('annotation_output_dir', 'path/to/annotation_output')
             # Include additional arguments from config if needed
         ]
 
