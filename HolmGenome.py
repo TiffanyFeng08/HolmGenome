@@ -6,7 +6,7 @@ This script orchestrates the genome analysis pipeline, including quality control
 assembly, and annotation steps. It reads configuration parameters from a YAML file,
 checks for the required tools, and executes each step while handling exceptions
 and logging the process.
-authors: Tiffany Feng, Zhangbin Cai, Sam Nguyen (2024)
+
 Usage:
     python HolmGenome.py --config config.yaml
 """
@@ -16,13 +16,14 @@ import os
 import logging
 import yaml
 import argparse
+import shutil
 
 # Adjust the Python path to include the 'src' directory
 script_dir = os.path.dirname(os.path.abspath(__file__))
 src_dir = os.path.join(script_dir, 'src')
 sys.path.append(src_dir)
 
-# Import the main functions from QC.py, Assembly.py, and Annotation.py
+# Import the main functions from qc.py, assembly.py, and annotation.py
 from qc import main as qc_main
 from assembly import main as assembly_main
 from annotation import main as annotation_main
@@ -68,36 +69,52 @@ def load_config(config_file='config.yaml'):
 
 def check_tool(tool):
     """
-    Check if a tool is installed and accessible in the system PATH.
+    Check if a tool is installed and accessible in the system PATH or at a specified path.
 
     Parameters:
-    - tool (str): Name of the tool executable.
+    - tool (str): Name of the tool executable or full path to it.
 
     Returns:
     - None
     """
-    try:
-        result = subprocess.run(
-            [tool, "-h"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
-        if result.returncode == 0:
-            logging.info(f"{tool} is installed: {result.stdout.strip()}")
-        else:
-            logging.warning(f"{tool} may not be properly installed or accessible.")
-            logging.warning(f"Output: {result.stderr.strip()}")
-    except FileNotFoundError:
-        logging.error(f"{tool} is not installed or not found in the system PATH.")
-        sys.exit(f"Error: {tool} is not installed or not found in the system PATH.")
+    tool_name = os.path.basename(tool)
+    # Determine if the tool is in PATH or if a full path is provided
+    if os.path.isabs(tool):
+        tool_path = tool
+    else:
+        tool_path = shutil.which(tool)
+        if tool_path is None:
+            logging.error(f"{tool_name} is not installed or not found in the system PATH.")
+            sys.exit(f"Error: {tool_name} is not installed or not found in the system PATH.")
+
+    if not os.access(tool_path, os.X_OK):
+        logging.error(f"{tool_name} is not executable.")
+        sys.exit(f"Error: {tool_name} is not executable.")
+
+    commands_to_try = [['--version'], ['-v'], ['-h'], ['--help']]
+    for cmd_args in commands_to_try:
+        try:
+            with open(os.devnull, 'w') as devnull:
+                result = subprocess.run(
+                    [tool_path] + cmd_args,
+                    stdout=devnull,
+                    stderr=devnull
+                )
+            if result.returncode in [0, 1]:  # Some tools return 1 for help/version
+                logging.info(f"{tool_name} is installed and accessible.")
+                return
+        except Exception as e:
+            logging.error(f"Error checking {tool_name}: {e}")
+            continue
+    logging.error(f"{tool_name} is not functioning as expected.")
+    sys.exit(f"Error: {tool_name} is not functioning as expected.")
 
 def check_required_tools(tools):
     """
     Check all required tools for the pipeline.
 
     Parameters:
-    - tools (list): List of tool names to check.
+    - tools (list): List of tool names or paths to check.
 
     Returns:
     - None
@@ -125,15 +142,17 @@ def main():
     # Load configuration
     config = load_config(args.config)
 
+    # Full path to reformat.sh (if using local copy)
+    # reformat_path = os.path.join(src_dir, 'reformat.sh')
+
     # List of tools to check
     tools = [
         config.get('fastqc_path', 'fastqc'),
-     #   config.get('multiqc_path', 'multiqc'),
         'java',  # For Trimmomatic
         'spades.py',
         'prokka',
         'checkm',
-        'reformat.sh',
+        'reformat.sh',  # Use system-installed version from BBMap module
         'bbmap.sh',
         'quast'
     ]
@@ -149,7 +168,6 @@ def main():
             '--trimmomatic_path', config['trimmomatic_path'],
             '--adapters_path', config['adapters_path'],
             '--fastqc_path', config.get('fastqc_path', 'fastqc'),
-          #  '--multiqc_path', config.get('multiqc_path', 'multiqc'),
             '--prokka_path', config.get('prokka_path', 'prokka')
             # Include additional arguments from config if needed
         ]
@@ -159,11 +177,14 @@ def main():
         qc_main(qc_args)
         logging.info('Quality Control step completed successfully.')
 
-        # Prepare arguments for Assembly.py
+        # Prepare arguments for assembly.py
         assembly_args = [
             '--base_dir', config['base_dir'],
-            '--trimmed_data_path', config['trimmed_data_path'],
-            '--min_contig_length', str(config.get('min_contig_length', 1000))
+            '--spades_path', config.get('spades_path', 'spades.py'),
+            '--quast_path', config.get('quast_path', 'quast'),
+            '--bbmap_path', config.get('bbmap_path', 'bbmap.sh'),
+            '--reformat_path', config.get('reformat_path', 'reformat.sh'),
+            '--minlength', str(config.get('min_contig_length', 1000))
             # Include additional arguments from config if needed
         ]
 
@@ -172,7 +193,7 @@ def main():
         assembly_main(assembly_args)
         logging.info('Assembly step completed successfully.')
 
-        # Prepare arguments for Annotation.py
+        # Prepare arguments for annotation.py
         annotation_args = [
             '--filtered_contigs_dir', config['filtered_contigs_dir'],
             '--annotation_output_dir', config['annotation_output_dir']
