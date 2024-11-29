@@ -167,8 +167,8 @@ def main():
             '--output_dir', config['output_dir'],
             '--trimmomatic_path', config['trimmomatic_path'],
             '--adapters_path', config['adapters_path'],
-            '--fastqc_path', config.get('fastqc_path', 'fastqc'),
-            '--prokka_path', config.get('prokka_path', 'prokka')
+            # '--fastqc_path', config.get('fastqc_path', 'fastqc'),
+            # '--prokka_path', config.get('prokka_path', 'prokka')
             # Include additional arguments from config if needed
         ]
 
