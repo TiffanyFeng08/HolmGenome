@@ -7,9 +7,12 @@ import logging
 import glob
 import sys
 
+
+    
 def setup_logging():
-    logging.basicConfig(filename='trim.log', filemode='a', level=logging.INFO,
+    logging.basicConfig(filename='trim.log', filemode='a', level=logging.DEBUG,
                         format='%(asctime)s - %(levelname)s - %(message)s')
+
 
 def setup_directories(base_dir):
     dirs = [
@@ -40,9 +43,25 @@ def run_multiqc(multiqc_path, input_dir):
     cmd = f'{multiqc_path} -o {input_dir} {input_dir}'
     run_subprocess(cmd, 'multiqc_output.log')
 
+# def run_trimmomatic(params):
+#     cmd = (
+#         f"java -jar {params['trimmomatic_path']} PE -phred33 "
+#         f"{params['input_file1']} {params['input_file2']} "
+#         f"{params['output_file1_paired']} {params['output_file1_unpaired']} "
+#         f"{params['output_file2_paired']} {params['output_file2_unpaired']} "
+#         f"ILLUMINACLIP:{params['adapters_path']}:{params['illuminaclip']} "
+#         f"LEADING:{params['leading']} TRAILING:{params['trailing']} "
+#         f"SLIDINGWINDOW:{params['slidingwindow']} MINLEN:{params['minlen']}"
+#     )
+#     if params['crop']:
+#         cmd += f" CROP:{params['crop']}"
+#     if params['headcrop']:
+#         cmd += f" HEADCROP:{params['headcrop']}"
+#     run_subprocess(cmd, 'trimmomatic_output.log')
+
 def run_trimmomatic(params):
     cmd = (
-        f"java -jar {params['trimmomatic_path']} PE -phred33 "
+        f"{params['trimmomatic_path']} PE -phred33 "
         f"{params['input_file1']} {params['input_file2']} "
         f"{params['output_file1_paired']} {params['output_file1_unpaired']} "
         f"{params['output_file2_paired']} {params['output_file2_unpaired']} "
@@ -56,6 +75,8 @@ def run_trimmomatic(params):
         cmd += f" HEADCROP:{params['headcrop']}"
     run_subprocess(cmd, 'trimmomatic_output.log')
 
+
+
 def run_bbduk(params):
     cmd = (
         f"{params['bbduk_path']} in1={params['input_file1']} in2={params['input_file2']} "
@@ -68,14 +89,17 @@ def run_bbduk(params):
     run_subprocess(cmd, 'bbduk_output.log')
 
 
+
 def pair_fastq_files(input_dir, suffix1, suffix2):
     extensions = ['.fastq', '.fastq.gz']
     paired_files = {}
     for ext in extensions:
         full_suffix1 = suffix1 + ext
         full_suffix2 = suffix2 + ext
+        logging.info(f'Looking for files ending with {full_suffix1} and {full_suffix2}')
         fastq_files = glob.glob(os.path.join(input_dir, f'*{full_suffix1}')) + \
                       glob.glob(os.path.join(input_dir, f'*{full_suffix2}'))
+        logging.info(f'Found files: {fastq_files}')
         for file in fastq_files:
             base = os.path.basename(file)
             if base.endswith(full_suffix1):
@@ -84,9 +108,8 @@ def pair_fastq_files(input_dir, suffix1, suffix2):
             elif base.endswith(full_suffix2):
                 sample_name = base.replace(full_suffix2, '')
                 paired_files.setdefault(sample_name, {})['R2'] = file
+    logging.info(f'Paired files: {paired_files}')
     return paired_files
-
-
 
 
 def process_samples(args, paired_files):
@@ -153,8 +176,10 @@ def main(args=None):
     parser.add_argument('--headcrop', default=None, help='HEADCROP option for Trimmomatic')
     parser.add_argument('--minlen', default='36', help='MINLEN option')
     parser.add_argument('--suffix1', default='_R1_001.fastq', help='Suffix for the first file in each pair (without extension)')
-    parser.add_argument('--suffix2', default='_R2_001.fastq', help='Suffix for the second file in each pair (without extension)')
-    parser.add_argument('--bbduk', action='store_true', help='Use BBDuk for processing')
+    #parser.add_argument('--suffix2', default='_R2_001.fastq', help='Suffix for the second file in each pair (without extension)')
+    #parser.add_argument('--bbduk', action='store_true', help='Use BBDuk for processing')
+    parser.add_argument('--suffix1', default='_R1_001', help='Suffix for the first file in each pair')
+    parser.add_argument('--suffix2', default='_R2_001', help='Suffix for the second file in each pair')
     parser.add_argument('--bbduk_path', required=False, help='Path to the BBDuk executable')
     parser.add_argument('--ktrim', default='r', help='KTRIM option for BBDuk')
     parser.add_argument('--k', default='23', help='K option for BBDuk')
