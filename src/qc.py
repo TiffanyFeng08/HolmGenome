@@ -162,7 +162,7 @@ def process_samples(args, paired_files):
             logging.warning(f'Missing pair for sample {sample}')
 
 
-def main(args=None):
+def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_dir', required=True, help='Path to the input directory')
     parser.add_argument('--output_dir', required=True, help='Path to the output directory')
@@ -193,7 +193,7 @@ def main(args=None):
    # parser.add_argument('--multiqc_path', default='multiqc', help='Path to the MultiQC executable')
 
     # Parse arguments
-    args = parser.parse_args(args)
+    args = parser.parse_args(argv)
 
     setup_logging()
     setup_directories(args.output_dir)
