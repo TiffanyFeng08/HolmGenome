@@ -67,19 +67,27 @@ def run_bbduk(params):
     )
     run_subprocess(cmd, 'bbduk_output.log')
 
+
 def pair_fastq_files(input_dir, suffix1, suffix2):
-    fastq_files = glob.glob(os.path.join(input_dir, f'*{suffix1}')) + \
-                  glob.glob(os.path.join(input_dir, f'*{suffix2}'))
+    extensions = ['.fastq', '.fastq.gz']
     paired_files = {}
-    for file in fastq_files:
-        base = os.path.basename(file)
-        if base.endswith(suffix1):
-            sample_name = base.replace(suffix1, '')
-            paired_files.setdefault(sample_name, {})['R1'] = file
-        elif base.endswith(suffix2):
-            sample_name = base.replace(suffix2, '')
-            paired_files.setdefault(sample_name, {})['R2'] = file
+    for ext in extensions:
+        full_suffix1 = suffix1 + ext
+        full_suffix2 = suffix2 + ext
+        fastq_files = glob.glob(os.path.join(input_dir, f'*{full_suffix1}')) + \
+                      glob.glob(os.path.join(input_dir, f'*{full_suffix2}'))
+        for file in fastq_files:
+            base = os.path.basename(file)
+            if base.endswith(full_suffix1):
+                sample_name = base.replace(full_suffix1, '')
+                paired_files.setdefault(sample_name, {})['R1'] = file
+            elif base.endswith(full_suffix2):
+                sample_name = base.replace(full_suffix2, '')
+                paired_files.setdefault(sample_name, {})['R2'] = file
     return paired_files
+
+
+
 
 def process_samples(args, paired_files):
     for sample, files in paired_files.items():
@@ -144,8 +152,8 @@ def main(args=None):
     parser.add_argument('--crop', default=None, help='CROP option for Trimmomatic')
     parser.add_argument('--headcrop', default=None, help='HEADCROP option for Trimmomatic')
     parser.add_argument('--minlen', default='36', help='MINLEN option')
-    parser.add_argument('--suffix1', default='_R1_001.fastq.gz', help='Suffix for the first file in each pair')
-    parser.add_argument('--suffix2', default='_R2_001.fastq.gz', help='Suffix for the second file in each pair')
+    parser.add_argument('--suffix1', default='_R1_001.fastq', help='Suffix for the first file in each pair (without extension)')
+    parser.add_argument('--suffix2', default='_R2_001.fastq', help='Suffix for the second file in each pair (without extension)')
     parser.add_argument('--bbduk', action='store_true', help='Use BBDuk for processing')
     parser.add_argument('--bbduk_path', required=False, help='Path to the BBDuk executable')
     parser.add_argument('--ktrim', default='r', help='KTRIM option for BBDuk')
