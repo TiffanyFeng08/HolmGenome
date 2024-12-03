@@ -1,16 +1,16 @@
 # Please modify the paths according to your own environment.
-base_dir: '/path/to/base'
-input_dir: '/path/to/raw_data'
-output_dir: '/path/to/QC_output'
+base_dir: '/lustre04/scratch/zhangbin/HolmGenome'
+input_dir: '/lustre04/scratch/zhangbin/HolmGenome/data'
+output_dir: '/lustre04/scratch/zhangbin/HolmGenome/data'
 trimmed_data_path: '/path/to/Trim_data'
 # trimmomatic_path: '$EBROOTTRIMMOMATIC/trimmomatic-0.39.jar'
 trimmomatic_path: 'trimmomatic'
-adapters_path: '/path/to/adapters.fa'
+adapters_path: '/lustre04/scratch/zhangbin/db/adapters.fa'
 fastqc_path: 'fastqc'
 # multiqc_path: 'multiqc'
 # --prokka_path: 'prokka'
---prokka_db_path: '/path/to/prokka_db'
+--prokka_db_path: '/lustre04/scratch/zhangbin/db/prokka/prokka_db'
 min_contig_length: 1000
-filtered_contigs_dir: '/path/to/Assembly/contigs/filtered_contigs'
-annotation_output_dir: '/path/to/Annotation'
+filtered_contigs_dir: '/lustre04/scratch/zhangbin/HolmGenome/data'
+annotation_output_dir: '/lustre04/scratch/zhangbin/HolmGenome/data'
 
