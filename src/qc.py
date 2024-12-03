@@ -59,9 +59,26 @@ def run_multiqc(multiqc_path, input_dir):
 #         cmd += f" HEADCROP:{params['headcrop']}"
 #     run_subprocess(cmd, 'trimmomatic_output.log')
 
+# def run_trimmomatic(params):
+#     cmd = (
+#         f"{params['trimmomatic_path']} PE -phred33 "
+#         f"{params['input_file1']} {params['input_file2']} "
+#         f"{params['output_file1_paired']} {params['output_file1_unpaired']} "
+#         f"{params['output_file2_paired']} {params['output_file2_unpaired']} "
+#         f"ILLUMINACLIP:{params['adapters_path']}:{params['illuminaclip']} "
+#         f"LEADING:{params['leading']} TRAILING:{params['trailing']} "
+#         f"SLIDINGWINDOW:{params['slidingwindow']} MINLEN:{params['minlen']}"
+#     )
+#     if params['crop']:
+#         cmd += f" CROP:{params['crop']}"
+#     if params['headcrop']:
+#         cmd += f" HEADCROP:{params['headcrop']}"
+#     run_subprocess(cmd, 'trimmomatic_output.log')
+
+
 def run_trimmomatic(params):
     cmd = (
-        f"{params['trimmomatic_path']} PE -phred33 "
+        f"java -jar {params['trimmomatic_path']} PE -phred33 "
         f"{params['input_file1']} {params['input_file2']} "
         f"{params['output_file1_paired']} {params['output_file1_unpaired']} "
         f"{params['output_file2_paired']} {params['output_file2_unpaired']} "
@@ -74,6 +91,7 @@ def run_trimmomatic(params):
     if params['headcrop']:
         cmd += f" HEADCROP:{params['headcrop']}"
     run_subprocess(cmd, 'trimmomatic_output.log')
+
 
 
 

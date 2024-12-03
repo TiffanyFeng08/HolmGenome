@@ -165,7 +165,7 @@ def main():
         qc_args = [
             '--input_dir', config['input_dir'],
             '--output_dir', config['output_dir'],
-            '--trimmomatic_path', config.get('trimmomatic_path'),
+            '--trimmomatic_path', config['trimmomatic_path'],
             '--adapters_path', config.get('adapters_path')
         ]
 
