@@ -1,5 +1,3 @@
-# src/assembly.py
-
 import os
 import subprocess
 import shutil
@@ -39,7 +37,7 @@ def pair_fastq_files(input_dir, suffix1, suffix2):
     return paired_files
 
 def run_assembly(trimmed_data_path, assembly_dir, spades_path='spades.py'):
-    paired_files = pair_fastq_files(trimmed_data_path, '_R1_001_paired.fastq.gz', '_R2_001_paired.fastq.gz')
+    paired_files = pair_fastq_files(trimmed_data_path, '_R1_paired.fastq.gz', '_R2_paired.fastq.gz')
     for sample, files in paired_files.items():
         if 'R1' in files and 'R2' in files:
             sample_output_dir = os.path.join(assembly_dir, "contigs", "samples", sample)
@@ -50,7 +48,7 @@ def run_assembly(trimmed_data_path, assembly_dir, spades_path='spades.py'):
                 '--pe1-2', files['R2'],
                 '-o', sample_output_dir
             ]
-            run_subprocess(cmd, 'spades_output.log')
+            run_subprocess(cmd, os.path.join(sample_output_dir, 'spades_output.log'))
             # Copy the resulting contigs to the all_contigs_dir
             contigs_src = os.path.join(sample_output_dir, "contigs.fasta")
             contigs_dest = os.path.join(assembly_dir, "contigs", "all_contigs", f"{sample}.fasta")
@@ -83,7 +81,7 @@ def run_quast(contigs_dir, output_dir, quast_path='quast'):
     run_subprocess(cmd, 'quast_output.log')
 
 def run_bbmap(trimmed_data_path, filtered_contigs_dir, coverage_dir, bbmap_path='bbmap.sh'):
-    paired_files = pair_fastq_files(trimmed_data_path, '_R1_001_paired.fastq.gz', '_R2_001_paired.fastq.gz')
+    paired_files = pair_fastq_files(trimmed_data_path, '_R1_paired.fastq.gz', '_R2_paired.fastq.gz')
     for sample, files in paired_files.items():
         if 'R1' in files and 'R2' in files:
             ref_file = os.path.join(filtered_contigs_dir, f"{sample}_filtered_contigs.fasta")
@@ -111,7 +109,6 @@ def main(args=None):
     parser = argparse.ArgumentParser(description='Genome Assembly Pipeline')
     parser.add_argument('--trimmed_data_path', required=True, help='Path to the trimmed data directory')
     parser.add_argument('--output_dir', required=True, help='Path to the output directory')
-   #parser.add_argument('--base_dir', required=True, help='Base directory for the pipeline')
     parser.add_argument('--spades_path', default='spades.py', help='Path to SPAdes executable')
     parser.add_argument('--quast_path', default='quast', help='Path to QUAST executable')
     parser.add_argument('--bbmap_path', default='bbmap.sh', help='Path to BBMap executable')
@@ -127,10 +124,10 @@ def main(args=None):
 
     setup_logging()
 
-    # Define directories
-    base_dir = args.base_dir
+    # Use args.output_dir instead of args.base_dir
+    base_dir = args.output_dir
     assembly_dir = os.path.join(base_dir, "Assembly")
-    trimmed_data_path = os.path.join(base_dir, 'Trim_data')
+    trimmed_data_path = args.trimmed_data_path
     all_contigs_dir = os.path.join(assembly_dir, "contigs", "all_contigs")
     filtered_contigs_dir = os.path.join(assembly_dir, "contigs", "filtered_contigs")
     quast_dir = os.path.join(assembly_dir, "Quast")
