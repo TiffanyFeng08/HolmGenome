@@ -2,7 +2,7 @@
 base_dir: '/lustre04/scratch/zhangbin/HolmGenome'
 input_dir: '/lustre04/scratch/zhangbin/HolmGenome/data'
 output_dir: '/lustre04/scratch/zhangbin/HolmGenome/data'
-trimmed_data_path: '/path/to/Trim_data'
+# trimmed_data_path: '/path/to/Trim_data'
 # trimmomatic_path: '$EBROOTTRIMMOMATIC/trimmomatic-0.39.jar'
 #trimmomatic_path: 'trimmomatic'
 trimmomatic_path: '$EBROOTTRIMMOMATIC/trimmomatic-0.39.jar'

@@ -162,11 +162,14 @@ def main():
 
     try:
         # Prepare arguments for qc.py
+        
         qc_args = [
             '--input_dir', config['input_dir'],
             '--output_dir', config['output_dir'],
             '--trimmomatic_path', config['trimmomatic_path'],
-            '--adapters_path', config.get('adapters_path')
+            '--adapters_path', config['adapters_path'],
+            '--suffix1', '_R1_001',
+            '--suffix2', '_R2_001'
         ]
 
         logging.info('Starting Quality Control step.')
@@ -174,11 +177,15 @@ def main():
         qc_main(qc_args)
         logging.info('Quality Control step completed successfully.')
 
+        # **Set the trimmed data path based on the QC output**
+        trimmed_data_path = os.path.join(config['output_dir'], 'Trim_data')
+
         # Prepare arguments for assembly.py
         # Replace '--base_dir' with '--output_dir'
+    
         assembly_args = [
             '--output_dir', config['output_dir'],
-            '--trimmed_data_path', config['trimmed_data_path'],
+            '--trimmed_data_path', trimmed_data_path,
             '--spades_path', config.get('spades_path', 'spades.py'),
             '--minlength', str(config.get('min_contig_length', 1000))
         ]
