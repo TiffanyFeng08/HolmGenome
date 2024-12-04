@@ -175,14 +175,14 @@ def main():
         logging.info('Quality Control step completed successfully.')
 
         # Prepare arguments for assembly.py
+        # Replace '--base_dir' with '--output_dir'
         assembly_args = [
-            '--base_dir', config.get('base_dir', '.'),
+            '--output_dir', config['output_dir'],
+            '--trimmed_data_path', config['trimmed_data_path'],
             '--spades_path', config.get('spades_path', 'spades.py'),
-            '--quast_path', config.get('quast_path', 'quast'),
-            '--bbmap_path', config.get('bbmap_path', 'bbmap.sh'),
-            '--reformat_path', config.get('reformat_path', 'reformat.sh'),
             '--minlength', str(config.get('min_contig_length', 1000))
         ]
+
 
         logging.info('Starting Assembly step.')
         # Run Assembly step

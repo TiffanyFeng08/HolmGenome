@@ -109,7 +109,9 @@ def run_bbmap(trimmed_data_path, filtered_contigs_dir, coverage_dir, bbmap_path=
 
 def main(args=None):
     parser = argparse.ArgumentParser(description='Genome Assembly Pipeline')
-    parser.add_argument('--base_dir', required=True, help='Base directory for the pipeline')
+    parser.add_argument('--trimmed_data_path', required=True, help='Path to the trimmed data directory')
+    parser.add_argument('--output_dir', required=True, help='Path to the output directory')
+   #parser.add_argument('--base_dir', required=True, help='Base directory for the pipeline')
     parser.add_argument('--spades_path', default='spades.py', help='Path to SPAdes executable')
     parser.add_argument('--quast_path', default='quast', help='Path to QUAST executable')
     parser.add_argument('--bbmap_path', default='bbmap.sh', help='Path to BBMap executable')
