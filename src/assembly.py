@@ -29,16 +29,15 @@ def run_subprocess(cmd, log_file):
         sys.exit(f'Error: Command failed. Check {log_file} for details.')
 
 def pair_fastq_files(trimmed_data_path):
-    # Find all R1 and R2 paired files
-    r1_files = sorted(glob.glob(os.path.join(trimmed_data_path, '*_R1_paired.fastq*')))
-    r2_files = sorted(glob.glob(os.path.join(trimmed_data_path, '*_R2_paired.fastq*')))
+    # Recursively find all R1 and R2 paired files in subdirectories
+    r1_files = sorted(glob.glob(os.path.join(trimmed_data_path, '**', '*_R1_paired.fastq*'), recursive=True))
 
     paired_samples = {}
     for r1_file in r1_files:
         base_name = os.path.basename(r1_file)
         sample_name = base_name.replace('_R1_paired.fastq.gz', '').replace('_R1_paired.fastq', '')
-        r2_file_gz = os.path.join(trimmed_data_path, f"{sample_name}_R2_paired.fastq.gz")
-        r2_file = os.path.join(trimmed_data_path, f"{sample_name}_R2_paired.fastq")
+        r2_file_gz = os.path.join(os.path.dirname(r1_file), f"{sample_name}_R2_paired.fastq.gz")
+        r2_file = os.path.join(os.path.dirname(r1_file), f"{sample_name}_R2_paired.fastq")
         if os.path.exists(r2_file_gz):
             r2_file = r2_file_gz
         elif os.path.exists(r2_file):
@@ -129,7 +128,6 @@ def run_bbmap(paired_samples, filtered_contigs_dir, coverage_dir, bbmap_path='bb
 def main(args=None):
     parser = argparse.ArgumentParser(description='Genome Assembly Pipeline')
     parser.add_argument('--output_dir', required=True, help='Path to the output directory')
-    # Removed '--trimmed_data_path' argument
     parser.add_argument('--spades_path', default='spades.py', help='Path to SPAdes executable')
     parser.add_argument('--quast_path', default='quast', help='Path to QUAST executable')
     parser.add_argument('--bbmap_path', default='bbmap.sh', help='Path to BBMap executable')
