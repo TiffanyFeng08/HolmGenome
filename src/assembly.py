@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 import subprocess
 import shutil
@@ -7,8 +9,12 @@ import logging
 import sys
 
 def setup_logging():
-    logging.basicConfig(filename='assembly.log', filemode='a', level=logging.INFO,
-                        format='%(asctime)s - %(levelname)s - %(message)s')
+    logging.basicConfig(
+        filename='assembly.log',
+        filemode='a',
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s'
+    )
 
 def setup_directories(directories):
     for directory in directories:
@@ -22,30 +28,34 @@ def run_subprocess(cmd, log_file):
         logging.error(f'Command failed: {" ".join(cmd)}')
         sys.exit(f'Error: Command failed. Check {log_file} for details.')
 
-def run_assembly(trimmed_data_path, assembly_dir, spades_path='spades.py'):
-    # Find all R1 paired files in the trimmed_data_path
-    r1_paired_files = glob.glob(os.path.join(trimmed_data_path, '*_R1_paired.fastq*'))
-    for r1_paired_file in r1_paired_files:
-        base_name = os.path.basename(r1_paired_file)
+def pair_fastq_files(trimmed_data_path):
+    # Find all R1 and R2 paired files
+    r1_files = sorted(glob.glob(os.path.join(trimmed_data_path, '*_R1_paired.fastq*')))
+    r2_files = sorted(glob.glob(os.path.join(trimmed_data_path, '*_R2_paired.fastq*')))
+
+    paired_samples = {}
+    for r1_file in r1_files:
+        base_name = os.path.basename(r1_file)
         sample_name = base_name.replace('_R1_paired.fastq.gz', '').replace('_R1_paired.fastq', '')
-        r2_paired_file = os.path.join(trimmed_data_path, f"{sample_name}_R2_paired.fastq.gz")
-        if not os.path.exists(r2_paired_file):
-            r2_paired_file = os.path.join(trimmed_data_path, f"{sample_name}_R2_paired.fastq")
-            if not os.path.exists(r2_paired_file):
-                logging.warning(f"No matching R2 paired file for {r1_paired_file}")
-                continue
-        # Look for unpaired files
-        unpaired_files = []
-        r1_unpaired_file = os.path.join(trimmed_data_path, f"{sample_name}_R1_unpaired.fastq.gz")
-        if not os.path.exists(r1_unpaired_file):
-            r1_unpaired_file = os.path.join(trimmed_data_path, f"{sample_name}_R1_unpaired.fastq")
-        if os.path.exists(r1_unpaired_file):
-            unpaired_files.append(r1_unpaired_file)
-        r2_unpaired_file = os.path.join(trimmed_data_path, f"{sample_name}_R2_unpaired.fastq.gz")
-        if not os.path.exists(r2_unpaired_file):
-            r2_unpaired_file = os.path.join(trimmed_data_path, f"{sample_name}_R2_unpaired.fastq")
-        if os.path.exists(r2_unpaired_file):
-            unpaired_files.append(r2_unpaired_file)
+        r2_file_gz = os.path.join(trimmed_data_path, f"{sample_name}_R2_paired.fastq.gz")
+        r2_file = os.path.join(trimmed_data_path, f"{sample_name}_R2_paired.fastq")
+        if os.path.exists(r2_file_gz):
+            r2_file = r2_file_gz
+        elif os.path.exists(r2_file):
+            pass
+        else:
+            logging.warning(f"No matching R2 file for {r1_file}. Skipping this sample.")
+            continue
+        paired_samples[sample_name] = {'R1': r1_file, 'R2': r2_file}
+    return paired_samples
+
+def run_assembly(paired_samples, assembly_dir, spades_path='spades.py'):
+    all_contigs_dir = os.path.join(assembly_dir, "contigs", "all_contigs")
+    os.makedirs(all_contigs_dir, exist_ok=True)
+
+    for sample_name, files in paired_samples.items():
+        r1_paired_file = files['R1']
+        r2_paired_file = files['R2']
         sample_output_dir = os.path.join(assembly_dir, "contigs", "samples", sample_name)
         os.makedirs(sample_output_dir, exist_ok=True)
         cmd = [
@@ -54,20 +64,23 @@ def run_assembly(trimmed_data_path, assembly_dir, spades_path='spades.py'):
             '--pe1-2', r2_paired_file,
             '-o', sample_output_dir
         ]
-        # Include unpaired reads if available
-        if unpaired_files:
-            cmd.extend(['--s1'] + unpaired_files)
+        # You can add '--threads' and '--memory' options if needed
         run_subprocess(cmd, os.path.join(sample_output_dir, 'spades_output.log'))
         # Copy the resulting contigs to the all_contigs_dir
         contigs_src = os.path.join(sample_output_dir, "contigs.fasta")
-        contigs_dest = os.path.join(assembly_dir, "contigs", "all_contigs", f"{sample_name}.fasta")
+        contigs_dest = os.path.join(all_contigs_dir, f"{sample_name}.fasta")
         if os.path.exists(contigs_src):
             shutil.copy(contigs_src, contigs_dest)
+            logging.info(f"Contigs copied for sample {sample_name}")
         else:
             logging.warning(f"Contigs file not found for sample {sample_name}")
 
 def reformat_contigs(all_contigs_dir, filtered_contigs_dir, minlength=1000, reformat_path='reformat.sh'):
     contig_files = glob.glob(os.path.join(all_contigs_dir, '*.fasta'))
+    if not contig_files:
+        logging.warning(f"No contig files found in {all_contigs_dir}")
+        return
+    os.makedirs(filtered_contigs_dir, exist_ok=True)
     for file in contig_files:
         sample_name = os.path.basename(file).split('.')[0]
         output_file = os.path.join(filtered_contigs_dir, f"{sample_name}.fasta")
@@ -78,27 +91,22 @@ def reformat_contigs(all_contigs_dir, filtered_contigs_dir, minlength=1000, refo
             f"minlength={minlength}"
         ]
         run_subprocess(cmd, 'reformat_output.log')
+        logging.info(f"Reformatted contigs for sample {sample_name}")
 
 def run_quast(contigs_dir, output_dir, quast_path='quast'):
     contig_files = glob.glob(os.path.join(contigs_dir, '*.fasta'))
     if not contig_files:
         logging.warning(f"No contig files found in {contigs_dir}")
         return
+    os.makedirs(output_dir, exist_ok=True)
     cmd = [quast_path] + contig_files + ['-o', output_dir]
     run_subprocess(cmd, os.path.join(output_dir, 'quast_output.log'))
+    logging.info(f"QUAST analysis completed for contigs in {contigs_dir}")
 
-def run_bbmap(trimmed_data_path, filtered_contigs_dir, coverage_dir, bbmap_path='bbmap.sh'):
-    # Find all R1 paired files in the trimmed_data_path
-    r1_paired_files = glob.glob(os.path.join(trimmed_data_path, '*_R1_paired.fastq*'))
-    for r1_paired_file in r1_paired_files:
-        base_name = os.path.basename(r1_paired_file)
-        sample_name = base_name.replace('_R1_paired.fastq.gz', '').replace('_R1_paired.fastq', '')
-        r2_paired_file = os.path.join(trimmed_data_path, f"{sample_name}_R2_paired.fastq.gz")
-        if not os.path.exists(r2_paired_file):
-            r2_paired_file = os.path.join(trimmed_data_path, f"{sample_name}_R2_paired.fastq")
-            if not os.path.exists(r2_paired_file):
-                logging.warning(f"No matching R2 paired file for {r1_paired_file}")
-                continue
+def run_bbmap(paired_samples, filtered_contigs_dir, coverage_dir, bbmap_path='bbmap.sh'):
+    for sample_name, files in paired_samples.items():
+        r1_paired_file = files['R1']
+        r2_paired_file = files['R2']
         ref_file = os.path.join(filtered_contigs_dir, f"{sample_name}.fasta")
         if not os.path.exists(ref_file):
             logging.warning(f"Reference contigs not found for sample {sample_name}")
@@ -121,7 +129,7 @@ def run_bbmap(trimmed_data_path, filtered_contigs_dir, coverage_dir, bbmap_path=
 def main(args=None):
     parser = argparse.ArgumentParser(description='Genome Assembly Pipeline')
     parser.add_argument('--output_dir', required=True, help='Path to the output directory')
-    parser.add_argument('--trimmed_data_path', required=True, help='Path to the trimmed FASTQ files')
+    # Removed '--trimmed_data_path' argument
     parser.add_argument('--spades_path', default='spades.py', help='Path to SPAdes executable')
     parser.add_argument('--quast_path', default='quast', help='Path to QUAST executable')
     parser.add_argument('--bbmap_path', default='bbmap.sh', help='Path to BBMap executable')
@@ -137,15 +145,26 @@ def main(args=None):
 
     setup_logging()
 
+    # Define directories
     base_dir = args.output_dir
     assembly_dir = os.path.join(base_dir, "Assembly")
-    trimmed_data_path = args.trimmed_data_path
+    trimmed_data_path = os.path.join(base_dir, "Trim_data")
     all_contigs_dir = os.path.join(assembly_dir, "contigs", "all_contigs")
     filtered_contigs_dir = os.path.join(assembly_dir, "contigs", "filtered_contigs")
     quast_dir = os.path.join(assembly_dir, "Quast")
     pre_quast_dir = os.path.join(quast_dir, "pre_Quast")
     filtered_quast_dir = os.path.join(quast_dir, "filtered_Quast")
     coverage_dir = os.path.join(assembly_dir, "Coverage")
+
+    # Logging the directories
+    logging.info(f'Output directory is set to: {base_dir}')
+    logging.info(f'Assembly directory is set to: {assembly_dir}')
+    logging.info(f'Trimmed data path is set to: {trimmed_data_path}')
+
+    # Check if trimmed_data_path exists
+    if not os.path.isdir(trimmed_data_path):
+        logging.error(f'Trimmed data directory does not exist: {trimmed_data_path}')
+        sys.exit(f'Error: Trimmed data directory does not exist: {trimmed_data_path}')
 
     # Setup directories
     setup_directories([
@@ -157,8 +176,14 @@ def main(args=None):
         coverage_dir
     ])
 
+    # Pair the FASTQ files
+    paired_samples = pair_fastq_files(trimmed_data_path)
+    if not paired_samples:
+        logging.error('No paired FASTQ files found. Exiting.')
+        sys.exit('Error: No paired FASTQ files found.')
+
     # Run assembly
-    run_assembly(trimmed_data_path, assembly_dir, spades_path=args.spades_path)
+    run_assembly(paired_samples, assembly_dir, spades_path=args.spades_path)
 
     # Reformat contigs
     reformat_contigs(all_contigs_dir, filtered_contigs_dir, minlength=args.minlength, reformat_path=args.reformat_path)
@@ -170,7 +195,7 @@ def main(args=None):
     run_quast(filtered_contigs_dir, filtered_quast_dir, quast_path=args.quast_path)
 
     # Run BBMap to calculate coverage
-    run_bbmap(trimmed_data_path, filtered_contigs_dir, coverage_dir, bbmap_path=args.bbmap_path)
+    run_bbmap(paired_samples, filtered_contigs_dir, coverage_dir, bbmap_path=args.bbmap_path)
 
 if __name__ == "__main__":
     main()

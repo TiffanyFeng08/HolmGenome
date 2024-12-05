@@ -183,10 +183,12 @@ def main():
         # Prepare arguments for assembly.py
         # Replace '--base_dir' with '--output_dir'
     
+     
         assembly_args = [
             '--output_dir', config['output_dir'],
-            '--trimmed_data_path', trimmed_data_path,
             '--spades_path', config.get('spades_path', 'spades.py'),
+            '--quast_path', config.get('quast_path', 'quast'),
+            '--reformat_path', config.get('reformat_path', 'reformat.sh'),
             '--minlength', str(config.get('min_contig_length', 1000))
         ]
 
