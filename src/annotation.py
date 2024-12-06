@@ -1,4 +1,4 @@
-# src/Annotation.py
+#!/usr/bin/env python3
 
 import subprocess
 import logging
@@ -44,6 +44,9 @@ def annotate_contigs(filtered_contigs_dir, annotation_output_dir):
     """
     os.makedirs(annotation_output_dir, exist_ok=True)
     fasta_files = glob.glob(os.path.join(filtered_contigs_dir, '*.fasta'))
+    if not fasta_files:
+        logging.warning(f"No FASTA files found in {filtered_contigs_dir} for annotation.")
+        return
     for fasta_file in fasta_files:
         sample_name = os.path.basename(fasta_file).split('.')[0]
         sample_output_dir = os.path.join(annotation_output_dir, sample_name)
@@ -53,13 +56,30 @@ def annotate_contigs(filtered_contigs_dir, annotation_output_dir):
 def main(args=None):
     parser = argparse.ArgumentParser(description='Genome Annotation Pipeline')
     parser.add_argument('--filtered_contigs_dir', required=True, help='Path to the filtered contigs directory')
-    parser.add_argument('--annotation_output_dir', required=True, help='Directory to store annotation results')
+    parser.add_argument('--output_dir', required=True, help='Path to the output directory')
     # Add other optional arguments as needed
     args = parser.parse_args(args)
 
     setup_logging()
 
-    annotate_contigs(args.filtered_contigs_dir, args.annotation_output_dir)
+    # Infer annotation_output_dir from output_dir
+    annotation_output_dir = os.path.join(args.output_dir, "Annotation")
+
+    logging.info(f'Filtered contigs directory: {args.filtered_contigs_dir}')
+    logging.info(f'Annotation output directory: {annotation_output_dir}')
+
+    # Check that filtered_contigs_dir exists and is not empty
+    if not os.path.isdir(args.filtered_contigs_dir):
+        logging.error(f'Filtered contigs directory does not exist: {args.filtered_contigs_dir}')
+        sys.exit(f'Error: Filtered contigs directory does not exist: {args.filtered_contigs_dir}')
+
+    fasta_files = glob.glob(os.path.join(args.filtered_contigs_dir, '*.fasta'))
+    if not fasta_files:
+        logging.warning(f"No FASTA files found in {args.filtered_contigs_dir}. Nothing to annotate.")
+        return
+
+    # Annotate contigs
+    annotate_contigs(args.filtered_contigs_dir, annotation_output_dir)
 
 if __name__ == "__main__":
     main()

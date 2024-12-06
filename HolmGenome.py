@@ -162,7 +162,6 @@ def main():
 
     try:
         # Prepare arguments for qc.py
-        
         qc_args = [
             '--input_dir', config['input_dir'],
             '--output_dir', config['output_dir'],
@@ -177,13 +176,10 @@ def main():
         qc_main(qc_args)
         logging.info('Quality Control step completed successfully.')
 
-        # **Set the trimmed data path based on the QC output**
+        # Set the trimmed data path based on the QC output
         trimmed_data_path = os.path.join(config['output_dir'], 'Trim_data')
 
         # Prepare arguments for assembly.py
-        # Replace '--base_dir' with '--output_dir'
-    
-     
         assembly_args = [
             '--output_dir', config['output_dir'],
             '--spades_path', config.get('spades_path', 'spades.py'),
@@ -192,16 +188,20 @@ def main():
             '--minlength', str(config.get('min_contig_length', 1000))
         ]
 
-
         logging.info('Starting Assembly step.')
         # Run Assembly step
         assembly_main(assembly_args)
         logging.info('Assembly step completed successfully.')
 
+        # Infer filtered_contigs_dir from output_dir
+        filtered_contigs_dir = os.path.join(config['output_dir'], 'Assembly', 'contigs', 'filtered_contigs')
+
         # Prepare arguments for annotation.py
+        # Since annotation.py now expects --output_dir and --filtered_contigs_dir,
+        # we pass those accordingly:
         annotation_args = [
-            '--filtered_contigs_dir', config.get('filtered_contigs_dir', 'path/to/filtered_contigs'),
-            '--annotation_output_dir', config.get('annotation_output_dir', 'path/to/annotation_output')
+            '--filtered_contigs_dir', filtered_contigs_dir,
+            '--output_dir', config['output_dir']
         ]
 
         logging.info('Starting Annotation step.')
@@ -214,6 +214,7 @@ def main():
     except Exception as e:
         logging.exception('An exception occurred during pipeline execution.')
         sys.exit(f"Error: {e}")
+
 
 def load_config(config_file=None):
     """
