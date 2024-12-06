@@ -22,8 +22,13 @@ def setup_directories(directories):
 
 def run_subprocess(cmd, log_file):
     logging.info(f'Running command: {" ".join(cmd)}')
+    # Create a copy of the environment and remove JAVA_TOOL_OPTIONS if present
+    env = os.environ.copy()
+    if 'JAVA_TOOL_OPTIONS' in env:
+        del env['JAVA_TOOL_OPTIONS']
+
     with open(log_file, 'a') as f:
-        result = subprocess.run(cmd, stdout=f, stderr=subprocess.STDOUT)
+        result = subprocess.run(cmd, stdout=f, stderr=subprocess.STDOUT, env=env)
     if result.returncode != 0:
         logging.error(f'Command failed: {" ".join(cmd)}')
         sys.exit(f'Error: Command failed. Check {log_file} for details.')
@@ -82,7 +87,6 @@ def reformat_contigs(all_contigs_dir, filtered_contigs_dir, minlength=1000, refo
     for file in contig_files:
         sample_name = os.path.basename(file).split('.')[0]
         output_file = os.path.join(filtered_contigs_dir, f"{sample_name}.fasta")
-        # Add overwrite=true to allow overwriting existing files
         cmd = [
             reformat_path,
             f"in={file}",
