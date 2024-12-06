@@ -63,7 +63,6 @@ def run_assembly(paired_samples, assembly_dir, spades_path='spades.py'):
             '--pe1-2', r2_paired_file,
             '-o', sample_output_dir
         ]
-        # You can add '--threads' and '--memory' options if needed
         run_subprocess(cmd, os.path.join(sample_output_dir, 'spades_output.log'))
         # Copy the resulting contigs to the all_contigs_dir
         contigs_src = os.path.join(sample_output_dir, "contigs.fasta")
@@ -83,11 +82,13 @@ def reformat_contigs(all_contigs_dir, filtered_contigs_dir, minlength=1000, refo
     for file in contig_files:
         sample_name = os.path.basename(file).split('.')[0]
         output_file = os.path.join(filtered_contigs_dir, f"{sample_name}.fasta")
+        # Add overwrite=true to allow overwriting existing files
         cmd = [
             reformat_path,
             f"in={file}",
             f"out={output_file}",
-            f"minlength={minlength}"
+            f"minlength={minlength}",
+            "overwrite=true"
         ]
         run_subprocess(cmd, 'reformat_output.log')
         logging.info(f"Reformatted contigs for sample {sample_name}")
@@ -154,7 +155,6 @@ def main(args=None):
     filtered_quast_dir = os.path.join(quast_dir, "filtered_Quast")
     coverage_dir = os.path.join(assembly_dir, "Coverage")
 
-    # Logging the directories
     logging.info(f'Output directory is set to: {base_dir}')
     logging.info(f'Assembly directory is set to: {assembly_dir}')
     logging.info(f'Trimmed data path is set to: {trimmed_data_path}')
