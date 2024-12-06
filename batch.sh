@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --account=def-jronho
 #SBATCH --time=5:00:00
-#SBATCH --job-name=PlamidSpades
+#SBATCH --job-name=HolmGenome
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --mem-per-cpu=10G
