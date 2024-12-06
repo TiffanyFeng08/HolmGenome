@@ -30,6 +30,9 @@ def run_prokka(fasta_file, output_dir, prefix='annotation', prokka_options=None)
     - prokka_options (list): Additional command-line options for Prokka.
     """
     prokka_options = prokka_options or []
+    # Add the --force option to allow overwriting existing directories
+    prokka_options.append('--force')
+
     cmd = [
         'prokka',
         '--outdir', output_dir,
@@ -57,12 +60,12 @@ def main(args=None):
     parser = argparse.ArgumentParser(description='Genome Annotation Pipeline')
     parser.add_argument('--filtered_contigs_dir', required=True, help='Path to the filtered contigs directory')
     parser.add_argument('--output_dir', required=True, help='Path to the output directory')
-    # Add other optional arguments as needed
+
     args = parser.parse_args(args)
 
     setup_logging()
 
-    # Infer annotation_output_dir from output_dir
+    # The annotation directory is inferred from output_dir
     annotation_output_dir = os.path.join(args.output_dir, "Annotation")
 
     logging.info(f'Filtered contigs directory: {args.filtered_contigs_dir}')
