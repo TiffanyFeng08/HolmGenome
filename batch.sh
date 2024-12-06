@@ -4,8 +4,8 @@
 #SBATCH --job-name=HolmGenome
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --mem-per-cpu=10G
-#SBATCH --cpus-per-task=10
+#SBATCH --mem-per-cpu=5G
+#SBATCH --cpus-per-task=4
 #SBATCH --mail-user=zhangbin.cai@mail.mcgill.ca
 #SBATCH --mail-type=BEGIN,END,FAIL,REQUEUE
 
