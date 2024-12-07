@@ -98,7 +98,8 @@ def main():
         except Exception as e:
             print(f"Error: Could not create output directory {args.output}: {e}")
             sys.exit(1)
-# Change directory to output_dir so all logs and outputs are inside output_dir
+
+    # Change directory to output_dir so all logs and outputs are inside output_dir
     os.chdir(args.output)
     log_file = os.path.join(args.output, 'HolmGenome.log')
     numeric_level = getattr(logging, args.log_level.upper(), None)
@@ -125,6 +126,8 @@ def main():
         sys.exit(0)
 
     # Run QC on raw data
+    # Normal run: process samples and run fastqc on raw + trimmed
+    # first run: no skip_trim
     qc_args_raw = [
         '--input_dir', args.input,
         '--output_dir', args.output,
@@ -138,18 +141,19 @@ def main():
     qc_main(qc_args_raw)
     logging.info('Quality Control on raw data completed successfully.')
 
-    # QC on trimmed data
+    # QC on trimmed data with skip_trim and updated suffixes (_R1_paired, _R2_paired)
     trimmed_data_path = os.path.join(args.output, 'Trim_data')
     qc_args_trimmed = [
         '--input_dir', trimmed_data_path,
         '--output_dir', args.output,
-        '--trimmomatic_path', args.trimmomatic_path, # required by qc.py?
-        '--adapters_path', args.adapters_path,        # required by qc.py?
-        '--suffix1', '_R1_001',
-        '--suffix2', '_R2_001'
+        '--trimmomatic_path', args.trimmomatic_path,
+        '--adapters_path', args.adapters_path,
+        '--suffix1', '_R1_paired',
+        '--suffix2', '_R2_paired',
+        '--skip_trim'
     ]
 
-    logging.info('Starting Quality Control on trimmed reads.')
+    logging.info('Starting Quality Control on trimmed reads (skip_trim).')
     qc_main(qc_args_trimmed)
     logging.info('Quality Control on trimmed reads completed successfully.')
 

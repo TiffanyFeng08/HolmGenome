@@ -7,12 +7,9 @@ import logging
 import glob
 import sys
 
-
-    
 def setup_logging():
     logging.basicConfig(filename='trim.log', filemode='a', level=logging.DEBUG,
                         format='%(asctime)s - %(levelname)s - %(message)s')
-
 
 def setup_directories(base_dir):
     dirs = [
@@ -20,8 +17,8 @@ def setup_directories(base_dir):
         os.path.join(base_dir, 'QC', 'raw_data'),
         os.path.join(base_dir, 'QC', 'Trim')
     ]
-    for dir in dirs:
-        os.makedirs(dir, exist_ok=True)
+    for d in dirs:
+        os.makedirs(d, exist_ok=True)
 
 def run_subprocess(cmd, log_file):
     logging.info(f'Running command: {cmd}')
@@ -34,6 +31,8 @@ def run_subprocess(cmd, log_file):
 def run_fastqc(fastqc_path, data_dir, output_dir):
     os.makedirs(output_dir, exist_ok=True)
     fastq_files = glob.glob(os.path.join(data_dir, '*.fastq*'))
+    if not fastq_files:
+        logging.warning(f"No FASTQ files found in {data_dir} for FastQC.")
     for fastq_file in fastq_files:
         cmd = f'{fastqc_path} -o {output_dir} {fastq_file}'
         run_subprocess(cmd, 'fastqc_output.log')
@@ -42,39 +41,6 @@ def run_multiqc(multiqc_path, input_dir):
     os.makedirs(input_dir, exist_ok=True)
     cmd = f'{multiqc_path} -o {input_dir} {input_dir}'
     run_subprocess(cmd, 'multiqc_output.log')
-
-# def run_trimmomatic(params):
-#     cmd = (
-#         f"java -jar {params['trimmomatic_path']} PE -phred33 "
-#         f"{params['input_file1']} {params['input_file2']} "
-#         f"{params['output_file1_paired']} {params['output_file1_unpaired']} "
-#         f"{params['output_file2_paired']} {params['output_file2_unpaired']} "
-#         f"ILLUMINACLIP:{params['adapters_path']}:{params['illuminaclip']} "
-#         f"LEADING:{params['leading']} TRAILING:{params['trailing']} "
-#         f"SLIDINGWINDOW:{params['slidingwindow']} MINLEN:{params['minlen']}"
-#     )
-#     if params['crop']:
-#         cmd += f" CROP:{params['crop']}"
-#     if params['headcrop']:
-#         cmd += f" HEADCROP:{params['headcrop']}"
-#     run_subprocess(cmd, 'trimmomatic_output.log')
-
-# def run_trimmomatic(params):
-#     cmd = (
-#         f"{params['trimmomatic_path']} PE -phred33 "
-#         f"{params['input_file1']} {params['input_file2']} "
-#         f"{params['output_file1_paired']} {params['output_file1_unpaired']} "
-#         f"{params['output_file2_paired']} {params['output_file2_unpaired']} "
-#         f"ILLUMINACLIP:{params['adapters_path']}:{params['illuminaclip']} "
-#         f"LEADING:{params['leading']} TRAILING:{params['trailing']} "
-#         f"SLIDINGWINDOW:{params['slidingwindow']} MINLEN:{params['minlen']}"
-#     )
-#     if params['crop']:
-#         cmd += f" CROP:{params['crop']}"
-#     if params['headcrop']:
-#         cmd += f" HEADCROP:{params['headcrop']}"
-#     run_subprocess(cmd, 'trimmomatic_output.log')
-
 
 def run_trimmomatic(params):
     cmd = (
@@ -92,9 +58,6 @@ def run_trimmomatic(params):
         cmd += f" HEADCROP:{params['headcrop']}"
     run_subprocess(cmd, 'trimmomatic_output.log')
 
-
-
-
 def run_bbduk(params):
     cmd = (
         f"{params['bbduk_path']} in1={params['input_file1']} in2={params['input_file2']} "
@@ -105,8 +68,6 @@ def run_bbduk(params):
         f"minlen={params['minlen']}"
     )
     run_subprocess(cmd, 'bbduk_output.log')
-
-
 
 def pair_fastq_files(input_dir, suffix1, suffix2):
     extensions = ['.fastq', '.fastq.gz']
@@ -129,7 +90,6 @@ def pair_fastq_files(input_dir, suffix1, suffix2):
     logging.info(f'Paired files: {paired_files}')
     return paired_files
 
-
 def process_samples(args, paired_files):
     for sample, files in paired_files.items():
         if 'R1' in files and 'R2' in files:
@@ -144,7 +104,7 @@ def process_samples(args, paired_files):
                     'input_file2': input_file2,
                     'output_file1': os.path.join(base_output_path, f'{sample}_R1_trimmed.fastq.gz'),
                     'output_file2': os.path.join(base_output_path, f'{sample}_R2_trimmed.fastq.gz'),
-                    'bbduk_path': args.bbduk_path or 'bbduk.sh',
+                    'bbduk_path': args.bbduk_path if args.bbduk_path else 'bbduk.sh',
                     'adapters_path': args.adapters_path,
                     'ktrim': args.ktrim,
                     'k': args.k,
@@ -161,10 +121,10 @@ def process_samples(args, paired_files):
                 params = {
                     'input_file1': input_file1,
                     'input_file2': input_file2,
-                    'output_file1_paired': os.path.join(base_output_path, f'{sample}_R1_paired.fastq.gz'),
-                    'output_file1_unpaired': os.path.join(base_output_path, f'{sample}_R1_unpaired.fastq.gz'),
-                    'output_file2_paired': os.path.join(base_output_path, f'{sample}_R2_paired.fastq.gz'),
-                    'output_file2_unpaired': os.path.join(base_output_path, f'{sample}_R2_unpaired.fastq.gz'),
+                    'output_file1_paired': os.path.join(base_output_path, f"{sample}_R1_paired.fastq.gz"),
+                    'output_file1_unpaired': os.path.join(base_output_path, f"{sample}_R1_unpaired.fastq.gz"),
+                    'output_file2_paired': os.path.join(base_output_path, f"{sample}_R2_paired.fastq.gz"),
+                    'output_file2_unpaired': os.path.join(base_output_path, f"{sample}_R2_unpaired.fastq.gz"),
                     'trimmomatic_path': args.trimmomatic_path,
                     'adapters_path': args.adapters_path,
                     'illuminaclip': args.illuminaclip,
@@ -179,7 +139,6 @@ def process_samples(args, paired_files):
         else:
             logging.warning(f'Missing pair for sample {sample}')
 
-
 def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_dir', required=True, help='Path to the input directory')
@@ -193,8 +152,6 @@ def main(argv=None):
     parser.add_argument('--crop', default=None, help='CROP option for Trimmomatic')
     parser.add_argument('--headcrop', default=None, help='HEADCROP option for Trimmomatic')
     parser.add_argument('--minlen', default='36', help='MINLEN option')
-   #parser.add_argument('--suffix1', default='_R1_001.fastq', help='Suffix for the first file in each pair (without extension)')
-    #parser.add_argument('--suffix2', default='_R2_001.fastq', help='Suffix for the second file in each pair (without extension)')
     parser.add_argument('--suffix1', default='_R1_001', help='Suffix for the first file in each pair')
     parser.add_argument('--suffix2', default='_R2_001', help='Suffix for the second file in each pair')
     parser.add_argument('--bbduk', action='store_true', help='Use BBDuk for processing')
@@ -208,28 +165,40 @@ def main(argv=None):
     parser.add_argument('--qtrim', default='rl', help='QTRIM option for BBDuk')
     parser.add_argument('--trimq', default='10', help='TRIMQ option for BBDuk')
     parser.add_argument('--fastqc_path', default='fastqc', help='Path to the FastQC executable')
-   # parser.add_argument('--multiqc_path', default='multiqc', help='Path to the MultiQC executable')
+    parser.add_argument('--skip_trim', action='store_true', help='Skip trimming and just run FastQC on input_dir')
 
-    # Parse arguments
     args = parser.parse_args(argv)
 
     setup_logging()
     setup_directories(args.output_dir)
 
-    # Pair input files
-    paired_files = pair_fastq_files(args.input_dir, args.suffix1, args.suffix2)
-    process_samples(args, paired_files)
+    if args.skip_trim:
+        # If skip_trim is True, we do NOT run process_samples().
+        # We assume input_dir points to trimmed reads.
+        # Just run FastQC on these reads and store in QC/Trim.
 
-    # Run FastQC and MultiQC
-    raw_data_qc_dir = os.path.join(args.output_dir, 'QC', 'raw_data')
-    trimmed_data_qc_dir = os.path.join(args.output_dir, 'QC', 'Trim')
+        trimmed_data_qc_dir = os.path.join(args.output_dir, 'QC', 'Trim')
+        run_fastqc(args.fastqc_path, args.input_dir, trimmed_data_qc_dir)
 
-    run_fastqc(args.fastqc_path, args.input_dir, raw_data_qc_dir)
-   # run_multiqc(args.multiqc_path, raw_data_qc_dir)
+    else:
+        # Normal run: pair files, trim, then run fastqc on raw and trimmed reads
+        paired_files = pair_fastq_files(args.input_dir, args.suffix1, args.suffix2)
+        process_samples(args, paired_files)
 
-    trimmed_data_path = os.path.join(args.output_dir, 'Trim_data')
-    run_fastqc(args.fastqc_path, trimmed_data_path, trimmed_data_qc_dir)
-   # run_multiqc(args.multiqc_path, trimmed_data_qc_dir)
+        # After trimming, run fastqc on raw_data and trimmed_data
+        raw_data_qc_dir = os.path.join(args.output_dir, 'QC', 'raw_data')
+        trimmed_data_qc_dir = os.path.join(args.output_dir, 'QC', 'Trim')
+
+        # FastQC on raw data (original input_dir)
+        run_fastqc(args.fastqc_path, args.input_dir, raw_data_qc_dir)
+
+        # FastQC on trimmed data: The trimmed reads are in output_dir/Trim_data
+        # Suffix might differ for trimmed reads (_R1_paired, _R2_paired)
+        # If needed, rerun qc.py with --skip_trim and adjusted suffixes on second run
+        trimmed_data_path = os.path.join(args.output_dir, 'Trim_data')
+        run_fastqc(args.fastqc_path, trimmed_data_path, trimmed_data_qc_dir)
+
+    return
 
 if __name__ == "__main__":
     main()
