@@ -3,20 +3,7 @@
 HolmGenome.py
 
 This script orchestrates the genome analysis pipeline, including quality control,
-assembly, and annotation steps. It now:
-- Changes working directory to output_dir so all logs are in output_dir.
-python HolmGenome.py [options]
-
-Options:
-    -i, --input              Input directory path
-    -o, --output             Output directory path
-    --trimmomatic_path       Path to the Trimmomatic executable or JAR
-    --adapters_path          Path to the adapters file for Trimmomatic
-    --prokka_db_path         Path to the Prokka database
-    --min_contig_length      Minimum contig length (default: 1000)
-    --check                  Check required tools and exit
-    -h, --help               Show this help message and exit
-
+assembly, and annotation steps, without asking for fastqc_path since fastqc is in PATH.
 """
 
 import subprocess
@@ -61,7 +48,7 @@ def check_tool(tool):
         try:
             with open(os.devnull, 'w') as devnull:
                 result = subprocess.run([tool_path] + cmd_args, stdout=devnull, stderr=devnull)
-            if result.returncode in [0, 1]:
+            if result.returncode in [0,1]:
                 logging.info(f"{tool_name} is installed and accessible.")
                 return
         except Exception as e:
@@ -83,10 +70,9 @@ def main():
     parser.add_argument('--trimmomatic_path', help='Path to the Trimmomatic executable or JAR')
     parser.add_argument('--adapters_path', help='Path to the adapters file')
     parser.add_argument('--prokka_db_path', help='Path to the Prokka database')
-    parser.add_argument('--fastqc_path', help='Path to FastQC if qc.py requires it')
     parser.add_argument('--min_contig_length', default='1000', help='Minimum contig length (default: 1000)')
     parser.add_argument('--check', action='store_true', help='Check required tools and exit')
-    parser.add_argument('--log_level', default='INFO', help='Logging level')
+    parser.add_argument('--log_level', default='INFO', help='Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)')
 
     args = parser.parse_args()
 
@@ -101,7 +87,7 @@ def main():
         args.adapters_path = input("Enter the adapters file path: ").strip()
     if not args.prokka_db_path:
         args.prokka_db_path = input("Enter the Prokka database path: ").strip()
-    
+
     # Validate directories
     if not os.path.isdir(args.input):
         print(f"Error: Input directory does not exist: {args.input}")
@@ -112,16 +98,14 @@ def main():
         except Exception as e:
             print(f"Error: Could not create output directory {args.output}: {e}")
             sys.exit(1)
-
-    # Change directory to output_dir so all logs and outputs are inside output_dir
+# Change directory to output_dir so all logs and outputs are inside output_dir
     os.chdir(args.output)
-
     log_file = os.path.join(args.output, 'HolmGenome.log')
     numeric_level = getattr(logging, args.log_level.upper(), None)
     if not isinstance(numeric_level, int):
         print(f'Invalid log level: {args.log_level}')
         sys.exit('Error: Invalid log level.')
-    setup_logging(log_level=numeric_level, log_file='HolmGenome.log')
+    setup_logging(log_level=numeric_level, log_file=log_file)
 
     logging.info('Starting HolmGenome pipeline with user-specified arguments.')
 
@@ -150,10 +134,6 @@ def main():
         '--suffix2', '_R2_001'
     ]
 
-    # Add fastqc_path if required by qc.py
-    if args.fastqc_path:
-        qc_args_raw.extend(['--fastqc_path', args.fastqc_path])
-
     logging.info('Starting Quality Control on raw data.')
     qc_main(qc_args_raw)
     logging.info('Quality Control on raw data completed successfully.')
@@ -163,15 +143,11 @@ def main():
     qc_args_trimmed = [
         '--input_dir', trimmed_data_path,
         '--output_dir', args.output,
-        '--trimmomatic_path', args.trimmomatic_path,
-        '--adapters_path', args.adapters_path,
+        '--trimmomatic_path', args.trimmomatic_path, # required by qc.py?
+        '--adapters_path', args.adapters_path,        # required by qc.py?
         '--suffix1', '_R1_001',
         '--suffix2', '_R2_001'
     ]
-
-    # Add fastqc_path again if qc.py needs it
-    if args.fastqc_path:
-        qc_args_trimmed.extend(['--fastqc_path', args.fastqc_path])
 
     logging.info('Starting Quality Control on trimmed reads.')
     qc_main(qc_args_trimmed)
