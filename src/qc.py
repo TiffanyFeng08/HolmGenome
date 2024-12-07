@@ -30,7 +30,8 @@ def run_subprocess(cmd, log_file):
 
 def run_fastqc(fastqc_path, data_dir, output_dir):
     os.makedirs(output_dir, exist_ok=True)
-    fastq_files = glob.glob(os.path.join(data_dir, '*.fastq*'))
+    # Search recursively for fastq files
+    fastq_files = glob.glob(os.path.join(data_dir, '**', '*.fastq*'), recursive=True)
     if not fastq_files:
         logging.warning(f"No FASTQ files found in {data_dir} for FastQC.")
     for fastq_file in fastq_files:
@@ -70,23 +71,27 @@ def run_bbduk(params):
     run_subprocess(cmd, 'bbduk_output.log')
 
 def pair_fastq_files(input_dir, suffix1, suffix2):
-    extensions = ['.fastq', '.fastq.gz']
+    # Recursively find files that match the suffixes
+    # Using '**' and recursive=True to handle subdirectories
     paired_files = {}
-    for ext in extensions:
-        full_suffix1 = suffix1 + ext
-        full_suffix2 = suffix2 + ext
-        logging.info(f'Looking for files ending with {full_suffix1} and {full_suffix2}')
-        fastq_files = glob.glob(os.path.join(input_dir, f'*{full_suffix1}')) + \
-                      glob.glob(os.path.join(input_dir, f'*{full_suffix2}'))
-        logging.info(f'Found files: {fastq_files}')
-        for file in fastq_files:
-            base = os.path.basename(file)
-            if base.endswith(full_suffix1):
-                sample_name = base.replace(full_suffix1, '')
-                paired_files.setdefault(sample_name, {})['R1'] = file
-            elif base.endswith(full_suffix2):
-                sample_name = base.replace(full_suffix2, '')
-                paired_files.setdefault(sample_name, {})['R2'] = file
+    # Consider .fastq and .fastq.gz
+    patterns = [f"**/*{suffix1}*.fastq*", f"**/*{suffix2}*.fastq*"]
+    found_files = []
+    for pattern in patterns:
+        found_files.extend(glob.glob(os.path.join(input_dir, pattern), recursive=True))
+    found_files = list(set(found_files))
+    logging.info(f'Found files with suffixes {suffix1}, {suffix2}: {found_files}')
+
+    # Group by sample
+    for file in found_files:
+        base = os.path.basename(file)
+        if suffix1 in base:
+            sample_name = base.replace(suffix1, '').replace('.fastq.gz', '').replace('.fastq','')
+            paired_files.setdefault(sample_name, {})['R1'] = file
+        elif suffix2 in base:
+            sample_name = base.replace(suffix2, '').replace('.fastq.gz', '').replace('.fastq','')
+            paired_files.setdefault(sample_name, {})['R2'] = file
+
     logging.info(f'Paired files: {paired_files}')
     return paired_files
 
@@ -173,15 +178,11 @@ def main(argv=None):
     setup_directories(args.output_dir)
 
     if args.skip_trim:
-        # If skip_trim is True, we do NOT run process_samples().
-        # We assume input_dir points to trimmed reads.
-        # Just run FastQC on these reads and store in QC/Trim.
-
+        # Just run FastQC on the given input_dir (assume trimmed reads here)
         trimmed_data_qc_dir = os.path.join(args.output_dir, 'QC', 'Trim')
         run_fastqc(args.fastqc_path, args.input_dir, trimmed_data_qc_dir)
-
     else:
-        # Normal run: pair files, trim, then run fastqc on raw and trimmed reads
+        # Normal operation: pair files, trim, run fastqc on raw and trimmed
         paired_files = pair_fastq_files(args.input_dir, args.suffix1, args.suffix2)
         process_samples(args, paired_files)
 
@@ -189,12 +190,12 @@ def main(argv=None):
         raw_data_qc_dir = os.path.join(args.output_dir, 'QC', 'raw_data')
         trimmed_data_qc_dir = os.path.join(args.output_dir, 'QC', 'Trim')
 
-        # FastQC on raw data (original input_dir)
+        # FastQC on raw data
         run_fastqc(args.fastqc_path, args.input_dir, raw_data_qc_dir)
 
-        # FastQC on trimmed data: The trimmed reads are in output_dir/Trim_data
-        # Suffix might differ for trimmed reads (_R1_paired, _R2_paired)
-        # If needed, rerun qc.py with --skip_trim and adjusted suffixes on second run
+        # For trimmed reads in subdirectories with `_R1_paired` and `_R2_paired`
+        # If needed, run qc.py again with --skip_trim and updated suffixes.
+        # But we can also just rely on run_fastqc to find fastqs recursively:
         trimmed_data_path = os.path.join(args.output_dir, 'Trim_data')
         run_fastqc(args.fastqc_path, trimmed_data_path, trimmed_data_qc_dir)
 
