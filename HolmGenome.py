@@ -37,6 +37,9 @@ from annotation import main as annotation_main
 
 VERSION = "1.0.0"  # Set your pipeline version here
 
+def show_version():
+    print(f"HolmGenome pipeline version {VERSION}")
+
 def setup_logging(log_level=logging.INFO, log_file='HolmGenome.log'):
     logging.basicConfig(
         filename=log_file,
@@ -88,14 +91,34 @@ def main():
     parser.add_argument('--prokka_db_path', help='Path to the Prokka database')
     parser.add_argument('--min_contig_length', default='1000', help='Minimum contig length (default: 1000)')
     parser.add_argument('--check', action='store_true', help='Check if all dependencies are installed')
-
-    # Add version argument
-    parser.add_argument('-v', '--version', action='version',
-                        version=f"HolmGenome pipeline version {VERSION}",
-                        help='Show pipeline version number and exit')
+    parser.add_argument('-v', '--version', action='store_true', help='Show the pipeline version number and exit')
 
     args = parser.parse_args()
 
+    # If --version is specified, show version and exit immediately
+    if args.version:
+        show_version()
+        sys.exit(0)
+
+    # If --check is used, run check_required_tools and exit immediately
+    if args.check:
+        tools = [
+            'fastqc',
+            'java',  # For Trimmomatic
+            'spades.py',
+            'prokka',
+            'checkm',
+            'reformat.sh',
+            'bbmap.sh',
+            'quast'
+        ]
+        # Setup a minimal logging before running check
+        setup_logging()
+        check_required_tools(tools)
+        logging.info("Dependencies check completed successfully.")
+        sys.exit(0)
+
+    # Only prompt for directories and paths if we're not in --check mode
     if not args.input:
         args.input = input("Enter the input directory: ").strip()
     if not args.output:
@@ -122,21 +145,6 @@ def main():
 
     logging.info('Starting HolmGenome pipeline with user-specified arguments.')
 
-    if args.check:
-        tools = [
-            'fastqc',
-            'java',  # For Trimmomatic
-            'spades.py',
-            'prokka',
-            'checkm',
-            'reformat.sh',
-            'bbmap.sh',
-            'quast'
-        ]
-        check_required_tools(tools)
-        logging.info("Dependencies check completed successfully.")
-        sys.exit(0)
-
     # Run QC on raw data
     qc_args_raw = [
         '--input_dir', args.input,
@@ -150,7 +158,6 @@ def main():
     qc_main(qc_args_raw)
     logging.info('Quality Control on raw data completed successfully.')
 
-    # QC on trimmed data
     trimmed_data_path = os.path.join(args.output, 'Trim_data')
     qc_args_trimmed = [
         '--input_dir', trimmed_data_path,
@@ -161,12 +168,10 @@ def main():
         '--suffix2', '_R2_paired',
         '--skip_trim'
     ]
-
     logging.info('Starting Quality Control on trimmed reads.')
     qc_main(qc_args_trimmed)
     logging.info('Quality Control on trimmed reads completed successfully.')
 
-    # Assembly
     assembly_args = [
         '--output_dir', args.output,
         '--spades_path', 'spades.py',
@@ -180,7 +185,6 @@ def main():
 
     filtered_contigs_dir = os.path.join(args.output, 'Assembly', 'contigs', 'filtered_contigs')
 
-    # Annotation
     annotation_args = [
         '--filtered_contigs_dir', filtered_contigs_dir,
         '--output_dir', args.output
