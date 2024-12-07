@@ -4,7 +4,7 @@ HolmGenome.py
 
 This script orchestrates the genome analysis pipeline, including quality control,
 assembly, and annotation steps. It uses command-line arguments instead of a YAML file.
-
+Now it calls qc_main twice to run QC on trimmed reads as well.
 Usage:
     python HolmGenome.py [options]
 
@@ -17,6 +17,7 @@ Options:
     --min_contig_length      Minimum contig length (default: 100)
     --check                  Check required tools and exit
     -h, --help               Show this help message and exit
+
 """
 
 import subprocess
@@ -31,7 +32,6 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 src_dir = os.path.join(script_dir, 'src')
 sys.path.append(src_dir)
 
-# Import the main functions from qc.py, assembly.py, and annotation.py
 from qc import main as qc_main
 from assembly import main as assembly_main
 from annotation import main as annotation_main
@@ -54,23 +54,13 @@ def setup_logging(log_level=logging.INFO, log_file='HolmGenome.log'):
     logging.getLogger().addHandler(console)
 
 def check_tool(tool):
-    """
-    Check if a tool is installed and accessible in the system PATH or at a specified path.
-
-    Parameters:
-    - tool (str): Name of the tool executable or full path to it.
-
-    Returns:
-    - None (exits if not found)
-    """
     tool_name = os.path.basename(tool)
-    # Determine if the tool is in PATH or if a full path is provided
     if os.path.isabs(tool):
         tool_path = tool
     else:
         tool_path = shutil.which(tool)
         if tool_path is None:
-            print(f"Error: {tool_name} is not installed or not found in the system PATH.")
+            print(f"Error: {tool_name} not found in PATH.")
             sys.exit(1)
 
     if not os.access(tool_path, os.X_OK):
@@ -81,30 +71,17 @@ def check_tool(tool):
     for cmd_args in commands_to_try:
         try:
             with open(os.devnull, 'w') as devnull:
-                result = subprocess.run(
-                    [tool_path] + cmd_args,
-                    stdout=devnull,
-                    stderr=devnull
-                )
-            if result.returncode in [0, 1]:  # Some tools return 1 for help/version
+                result = subprocess.run([tool_path] + cmd_args, stdout=devnull, stderr=devnull)
+            if result.returncode in [0, 1]:
                 logging.info(f"{tool_name} is installed and accessible.")
                 return
         except Exception as e:
             logging.error(f"Error checking {tool_name}: {e}")
             continue
-    logging.error(f"{tool_name} is not functioning as expected.")
-    sys.exit(f"Error: {tool_name} is not functioning as expected.")
+    logging.error(f"{tool_name} not functioning as expected.")
+    sys.exit(f"Error: {tool_name} not functioning as expected.")
 
 def check_required_tools(tools):
-    """
-    Check all required tools for the pipeline.
-
-    Parameters:
-    - tools (list): List of tool names or paths to check.
-
-    Returns:
-    - None (exits if a tool is missing)
-    """
     logging.info('Checking required tools...')
     for tool in tools:
         check_tool(tool)
@@ -117,6 +94,7 @@ def main():
     parser.add_argument('--trimmomatic_path', help='Path to the Trimmomatic executable or JAR')
     parser.add_argument('--adapters_path', help='Path to the adapters file')
     parser.add_argument('--prokka_db_path', help='Path to the Prokka database')
+    parser.add_argument('--fastqc_path', help='Path to the FastQC executable')
     parser.add_argument('--min_contig_length', default='100', help='Minimum contig length (default: 100)')
     parser.add_argument('--check', action='store_true', help='Check required tools and exit')
     parser.add_argument('--log_level', default='INFO', help='Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)')
@@ -134,6 +112,8 @@ def main():
         args.adapters_path = input("Enter the adapters file path: ").strip()
     if not args.prokka_db_path:
         args.prokka_db_path = input("Enter the Prokka database path: ").strip()
+    if not args.fastqc_path:
+        args.fastqc_path = input("Enter the FastQC path: ").strip()
 
     # Ensure directories exist
     if not os.path.isdir(args.input):
@@ -174,27 +154,42 @@ def main():
         sys.exit(0)
 
     # Proceed with the pipeline
-    # Prepare arguments for qc.py
+    # Prepare arguments for qc.py (first run on raw data)
     qc_args = [
         '--input_dir', args.input,
         '--output_dir', args.output,
         '--trimmomatic_path', args.trimmomatic_path,
         '--adapters_path', args.adapters_path,
+        '--fastqc_path', args.fastqc_path,
         '--suffix1', '_R1_001',
         '--suffix2', '_R2_001'
     ]
 
-    logging.info('Starting Quality Control step.')
+    logging.info('Starting Quality Control step on raw data.')
     qc_main(qc_args)
-    logging.info('Quality Control step completed successfully.')
+    logging.info('Quality Control on raw data completed successfully.')
 
     # Set the trimmed data path based on the QC output
     trimmed_data_path = os.path.join(args.output, 'Trim_data')
 
+    # Run qc_main again for trimmed reads
+    # This second call runs fastqc on trimmed data. We don't need trimming again, so no trimmomatic args needed.
+    # Just ensure qc.py knows to run fastqc on existing trimmed data.
+    # If qc.py requires special arguments to skip trimming, add them, otherwise assume it runs fastqc only.
+    qc_args_trimmed = [
+        '--input_dir', trimmed_data_path,
+        '--output_dir', args.output,
+        '--fastqc_path', args.fastqc_path
+    ]
+
+    logging.info('Starting Quality Control step on trimmed reads.')
+    qc_main(qc_args_trimmed)
+    logging.info('Quality Control on trimmed reads completed successfully.')
+
     # Prepare arguments for assembly.py
     assembly_args = [
         '--output_dir', args.output,
-        '--spades_path', 'spades.py',  # Assuming spades_path from config or environment
+        '--spades_path', 'spades.py',  # or args.spades_path if needed
         '--quast_path', 'quast',
         '--reformat_path', 'reformat.sh',
         '--minlength', str(args.min_contig_length)
@@ -204,7 +199,6 @@ def main():
     assembly_main(assembly_args)
     logging.info('Assembly step completed successfully.')
 
-    # Infer filtered_contigs_dir from output_dir
     filtered_contigs_dir = os.path.join(args.output, 'Assembly', 'contigs', 'filtered_contigs')
 
     # Prepare arguments for annotation.py
