@@ -3,7 +3,21 @@
 HolmGenome.py
 
 This script orchestrates the genome analysis pipeline, including quality control,
-assembly, and annotation steps, without asking for fastqc_path since fastqc is in PATH.
+assembly, and annotation steps.
+-h, --help            show this help message and exit
+  -i INPUT, --input INPUT
+                        Path to the input directory
+  -o OUTPUT, --output OUTPUT
+                        Path to the output directory
+  --trimmomatic_path TRIMMOMATIC_PATH
+                        Path to the Trimmomatic executable or JAR
+  --adapters_path ADAPTERS_PATH
+                        Path to the adapters file
+  --prokka_db_path PROKKA_DB_PATH
+                        Path to the Prokka database
+  --min_contig_length MIN_CONTIG_LENGTH
+                        Minimum contig length (default: 1000)
+  --check               Check required tools and exit
 """
 
 import subprocess
@@ -71,8 +85,7 @@ def main():
     parser.add_argument('--adapters_path', help='Path to the adapters file')
     parser.add_argument('--prokka_db_path', help='Path to the Prokka database')
     parser.add_argument('--min_contig_length', default='1000', help='Minimum contig length (default: 1000)')
-    parser.add_argument('--check', action='store_true', help='Check required tools and exit')
-    parser.add_argument('--log_level', default='INFO', help='Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)')
+    parser.add_argument('--check', action='store_true', help='Check if all dependencies are installed')
 
     args = parser.parse_args()
 
@@ -88,7 +101,6 @@ def main():
     if not args.prokka_db_path:
         args.prokka_db_path = input("Enter the Prokka database path: ").strip()
 
-    # Validate directories
     if not os.path.isdir(args.input):
         print(f"Error: Input directory does not exist: {args.input}")
         sys.exit(1)
@@ -99,14 +111,9 @@ def main():
             print(f"Error: Could not create output directory {args.output}: {e}")
             sys.exit(1)
 
-    # Change directory to output_dir so all logs and outputs are inside output_dir
-    os.chdir(args.output)
+    # Set up logging in the output directory
     log_file = os.path.join(args.output, 'HolmGenome.log')
-    numeric_level = getattr(logging, args.log_level.upper(), None)
-    if not isinstance(numeric_level, int):
-        print(f'Invalid log level: {args.log_level}')
-        sys.exit('Error: Invalid log level.')
-    setup_logging(log_level=numeric_level, log_file=log_file)
+    setup_logging(log_file=log_file)
 
     logging.info('Starting HolmGenome pipeline with user-specified arguments.')
 
@@ -122,13 +129,10 @@ def main():
             'quast'
         ]
         check_required_tools(tools)
-        logging.info("Tool check completed successfully. Exiting as requested by --check.")
+        logging.info("Dependencies check completed successfully.")
         sys.exit(0)
 
-    # Run QC on raw data
-    # Normal run: process samples and run fastqc on raw + trimmed
-    # first run: no skip_trim
-    qc_args_raw = [
+        qc_args_raw = [
         '--input_dir', args.input,
         '--output_dir', args.output,
         '--trimmomatic_path', args.trimmomatic_path,
@@ -136,12 +140,10 @@ def main():
         '--suffix1', '_R1_001',
         '--suffix2', '_R2_001'
     ]
-
     logging.info('Starting Quality Control on raw data.')
     qc_main(qc_args_raw)
     logging.info('Quality Control on raw data completed successfully.')
 
-    # QC on trimmed data with skip_trim and updated suffixes (_R1_paired, _R2_paired)
     trimmed_data_path = os.path.join(args.output, 'Trim_data')
     qc_args_trimmed = [
         '--input_dir', trimmed_data_path,
@@ -152,12 +154,10 @@ def main():
         '--suffix2', '_R2_paired',
         '--skip_trim'
     ]
-
-    logging.info('Starting Quality Control on trimmed reads (skip_trim).')
+    logging.info('Starting Quality Control on trimmed reads.')
     qc_main(qc_args_trimmed)
     logging.info('Quality Control on trimmed reads completed successfully.')
 
-    # Assembly
     assembly_args = [
         '--output_dir', args.output,
         '--spades_path', 'spades.py',
@@ -171,7 +171,6 @@ def main():
 
     filtered_contigs_dir = os.path.join(args.output, 'Assembly', 'contigs', 'filtered_contigs')
 
-    # Annotation
     annotation_args = [
         '--filtered_contigs_dir', filtered_contigs_dir,
         '--output_dir', args.output
