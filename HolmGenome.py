@@ -29,12 +29,12 @@ from qc import main as qc_main
 from assembly import main as assembly_main
 from annotation import main as annotation_main
 
-def setup_logging(log_level=logging.INFO):
+def setup_logging(log_level, log_file):
     """
     Configure logging for the script.
     """
     logging.basicConfig(
-        filename='HolmGenome.log',
+        filename=log_file,
         filemode='a',
         level=log_level,
         format='%(asctime)s - %(levelname)s - %(message)s'
@@ -63,12 +63,12 @@ def check_tool(tool):
     else:
         tool_path = shutil.which(tool)
         if tool_path is None:
-            logging.error(f"{tool_name} is not installed or not found in the system PATH.")
-            sys.exit(f"Error: {tool_name} is not installed or not found in the system PATH.")
+            print(f"Error: {tool_name} is not installed or not found in the system PATH.")
+            sys.exit(1)
 
     if not os.access(tool_path, os.X_OK):
-        logging.error(f"{tool_name} is not executable.")
-        sys.exit(f"Error: {tool_name} is not executable.")
+        print(f"Error: {tool_name} is not executable.")
+        sys.exit(1)
 
     commands_to_try = [['--version'], ['-v'], ['-h'], ['--help']]
     for cmd_args in commands_to_try:
@@ -103,6 +103,30 @@ def check_required_tools(tools):
         check_tool(tool)
     logging.info('All required tools are installed and accessible.')
 
+def load_config(config_file=None):
+    """
+    Load configuration parameters from a YAML file.
+
+    Parameters:
+    - config_file (str): Path to the configuration YAML file.
+
+    Returns:
+    - config (dict): Dictionary containing configuration parameters.
+    """
+    config = {}
+    if config_file:
+        try:
+            with open(config_file, 'r') as f:
+                config = yaml.safe_load(f)
+            # We will log this after logging is set up
+        except FileNotFoundError:
+            print(f"Error: Configuration file {config_file} not found.")
+            sys.exit(1)
+        except yaml.YAMLError as e:
+            print(f"Error: Invalid YAML syntax in configuration file: {e}")
+            sys.exit(1)
+    return config
+
 def main():
     parser = argparse.ArgumentParser(description='HolmGenome Pipeline')
     parser.add_argument('--config', help='Path to the configuration file')
@@ -111,32 +135,7 @@ def main():
     parser.add_argument('--log_level', default='INFO', help='Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)')
     args = parser.parse_args()
 
-    # Setup logging
-    numeric_level = getattr(logging, args.log_level.upper(), None)
-    if not isinstance(numeric_level, int):
-        print(f'Invalid log level: {args.log_level}')
-        sys.exit('Error: Invalid log level.')
-    setup_logging(log_level=numeric_level)
-
-    logging.info('Starting HolmGenome pipeline.')
-
-    # List of tools to check
-    tools = [
-        'fastqc',
-        'java',  # For Trimmomatic
-        'spades.py',
-        'prokka',
-        'checkm',
-        'reformat.sh',  # Use system-installed version from BBMap module
-        'bbmap.sh',
-        'quast'
-    ]
-
-    # Check for required tools before doing anything else
-    logging.info('Checking for required tools...')
-    check_required_tools(tools)
-
-    # Load configuration
+    # We must load config first to know output_dir
     config = load_config(args.config)
 
     # Merge command-line arguments into the configuration
@@ -157,8 +156,43 @@ def main():
     required_params = ['input_dir', 'output_dir']
     missing_params = [p for p in required_params if p not in config or not config[p]]
     if missing_params:
-        logging.error(f"Missing required parameters: {', '.join(missing_params)}")
-        sys.exit(f"Error: Missing required parameters: {', '.join(missing_params)}")
+        print(f"Error: Missing required parameters: {', '.join(missing_params)}")
+        sys.exit(1)
+
+    # Now that we have output_dir, let's ensure logs go into output_dir
+    output_dir = config['output_dir']
+    # Change directory to output_dir so all logs are created there
+    if not os.path.isdir(output_dir):
+        print(f"Error: output_dir does not exist: {output_dir}")
+        sys.exit(1)
+
+    os.chdir(output_dir)
+
+    # Setup logging now that we know output_dir
+    numeric_level = getattr(logging, args.log_level.upper(), None)
+    if not isinstance(numeric_level, int):
+        print(f'Invalid log level: {args.log_level}')
+        sys.exit('Error: Invalid log level.')
+    setup_logging(log_level=numeric_level, log_file=os.path.join(output_dir, 'HolmGenome.log'))
+
+    logging.info('Starting HolmGenome pipeline.')
+    logging.info('Configuration loaded successfully.')
+
+    # List of tools to check
+    tools = [
+        'fastqc',
+        'java',  # For Trimmomatic
+        'spades.py',
+        'prokka',
+        'checkm',
+        'reformat.sh',  # Use system-installed version from BBMap module
+        'bbmap.sh',
+        'quast'
+    ]
+
+    # Check for required tools before doing anything else
+    logging.info('Checking for required tools...')
+    check_required_tools(tools)
 
     try:
         # Prepare arguments for qc.py
@@ -197,8 +231,6 @@ def main():
         filtered_contigs_dir = os.path.join(config['output_dir'], 'Assembly', 'contigs', 'filtered_contigs')
 
         # Prepare arguments for annotation.py
-        # Since annotation.py now expects --output_dir and --filtered_contigs_dir,
-        # we pass those accordingly:
         annotation_args = [
             '--filtered_contigs_dir', filtered_contigs_dir,
             '--output_dir', config['output_dir']
@@ -214,31 +246,6 @@ def main():
     except Exception as e:
         logging.exception('An exception occurred during pipeline execution.')
         sys.exit(f"Error: {e}")
-
-
-def load_config(config_file=None):
-    """
-    Load configuration parameters from a YAML file.
-
-    Parameters:
-    - config_file (str): Path to the configuration YAML file.
-
-    Returns:
-    - config (dict): Dictionary containing configuration parameters.
-    """
-    config = {}
-    if config_file:
-        try:
-            with open(config_file, 'r') as f:
-                config = yaml.safe_load(f)
-            logging.info('Configuration loaded successfully.')
-        except FileNotFoundError:
-            logging.error(f'Configuration file {config_file} not found.')
-            sys.exit(f"Error: Configuration file {config_file} not found.")
-        except yaml.YAMLError as e:
-            logging.error(f"Error parsing configuration file: {e}")
-            sys.exit("Error: Invalid YAML syntax in configuration file.")
-    return config
 
 if __name__ == "__main__":
     main()
