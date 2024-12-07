@@ -16,7 +16,7 @@ Options:
     --prokka_db_path         Path to the Prokka database
     --min_contig_length      Minimum contig length (default: 1000)
     --check                  Check if all dependencies are installed
-    -v, --version            Show pipeline version number and exit
+    -v, --version            Show the pipeline version number and exit
     -h, --help               Show this help message and exit
 """
 
@@ -100,6 +100,9 @@ def main():
         show_version()
         sys.exit(0)
 
+    # Setup a minimal logging before checks (no directories needed)
+    setup_logging()
+
     # If --check is used, run check_required_tools and exit immediately
     if args.check:
         tools = [
@@ -112,13 +115,12 @@ def main():
             'bbmap.sh',
             'quast'
         ]
-        # Setup a minimal logging before running check
-        setup_logging()
         check_required_tools(tools)
         logging.info("Dependencies check completed successfully.")
         sys.exit(0)
 
-    # Only prompt for directories and paths if we're not in --check mode
+    # Now if we reach here, it means no --check was given
+    # Now we can prompt for directories and paths
     if not args.input:
         args.input = input("Enter the input directory: ").strip()
     if not args.output:
@@ -140,6 +142,7 @@ def main():
             print(f"Error: Could not create output directory {args.output}: {e}")
             sys.exit(1)
 
+    # Now that output_dir is known, set up logging properly
     log_file = os.path.join(args.output, 'HolmGenome.log')
     setup_logging(log_file=log_file)
 
