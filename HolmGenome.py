@@ -3,19 +3,26 @@
 HolmGenome.py
 
 This script orchestrates the genome analysis pipeline, including quality control,
-assembly, and annotation steps. It reads configuration parameters from a YAML file,
-checks for the required tools, and executes each step while handling exceptions
-and logging the process.
+assembly, and annotation steps. It uses command-line arguments instead of a YAML file.
 
 Usage:
-    python HolmGenome.py --config config.yaml
+    python HolmGenome.py [options]
+
+Options:
+    -i, --input              Input directory path
+    -o, --output             Output directory path
+    --trimmomatic_path       Path to the Trimmomatic executable or JAR
+    --adapters_path          Path to the adapters file for Trimmomatic
+    --prokka_db_path         Path to the Prokka database
+    --min_contig_length      Minimum contig length (default: 100)
+    --check                  Check required tools and exit
+    -h, --help               Show this help message and exit
 """
 
 import subprocess
 import sys
 import os
 import logging
-import yaml
 import argparse
 import shutil
 
@@ -29,7 +36,7 @@ from qc import main as qc_main
 from assembly import main as assembly_main
 from annotation import main as annotation_main
 
-def setup_logging(log_level, log_file):
+def setup_logging(log_level=logging.INFO, log_file='HolmGenome.log'):
     """
     Configure logging for the script.
     """
@@ -54,7 +61,7 @@ def check_tool(tool):
     - tool (str): Name of the tool executable or full path to it.
 
     Returns:
-    - None
+    - None (exits if not found)
     """
     tool_name = os.path.basename(tool)
     # Determine if the tool is in PATH or if a full path is provided
@@ -96,156 +103,121 @@ def check_required_tools(tools):
     - tools (list): List of tool names or paths to check.
 
     Returns:
-    - None
+    - None (exits if a tool is missing)
     """
     logging.info('Checking required tools...')
     for tool in tools:
         check_tool(tool)
     logging.info('All required tools are installed and accessible.')
 
-def load_config(config_file=None):
-    """
-    Load configuration parameters from a YAML file.
-
-    Parameters:
-    - config_file (str): Path to the configuration YAML file.
-
-    Returns:
-    - config (dict): Dictionary containing configuration parameters.
-    """
-    config = {}
-    if config_file:
-        try:
-            with open(config_file, 'r') as f:
-                config = yaml.safe_load(f)
-            # We will log this after logging is set up
-        except FileNotFoundError:
-            print(f"Error: Configuration file {config_file} not found.")
-            sys.exit(1)
-        except yaml.YAMLError as e:
-            print(f"Error: Invalid YAML syntax in configuration file: {e}")
-            sys.exit(1)
-    return config
-
 def main():
     parser = argparse.ArgumentParser(description='HolmGenome Pipeline')
-    parser.add_argument('--config', help='Path to the configuration file')
-    parser.add_argument('--input_dir', help='Path to the input directory')
-    parser.add_argument('--output_dir', help='Path to the output directory')
+    parser.add_argument('-i', '--input', help='Path to the input directory')
+    parser.add_argument('-o', '--output', help='Path to the output directory')
+    parser.add_argument('--trimmomatic_path', help='Path to the Trimmomatic executable or JAR')
+    parser.add_argument('--adapters_path', help='Path to the adapters file')
+    parser.add_argument('--prokka_db_path', help='Path to the Prokka database')
+    parser.add_argument('--min_contig_length', default='100', help='Minimum contig length (default: 100)')
+    parser.add_argument('--check', action='store_true', help='Check required tools and exit')
     parser.add_argument('--log_level', default='INFO', help='Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)')
+
     args = parser.parse_args()
 
-    # We must load config first to know output_dir
-    config = load_config(args.config)
+    # Prompt for missing required arguments if not provided
+    if not args.input:
+        args.input = input("Enter the input directory: ").strip()
+    if not args.output:
+        args.output = input("Enter the output directory: ").strip()
+    if not args.trimmomatic_path:
+        args.trimmomatic_path = input("Enter the Trimmomatic path: ").strip()
+    if not args.adapters_path:
+        args.adapters_path = input("Enter the adapters file path: ").strip()
+    if not args.prokka_db_path:
+        args.prokka_db_path = input("Enter the Prokka database path: ").strip()
 
-    # Merge command-line arguments into the configuration
-    if args.input_dir:
-        config['input_dir'] = args.input_dir
-    if args.output_dir:
-        config['output_dir'] = args.output_dir
-
-    # If no arguments are provided, prompt for input and output directories
-    if not config.get('input_dir') or not config.get('output_dir'):
-        print("Required directories not specified. Please provide them now.")
-        if not config.get('input_dir'):
-            config['input_dir'] = input("Enter the input directory: ").strip()
-        if not config.get('output_dir'):
-            config['output_dir'] = input("Enter the output directory: ").strip()
-
-    # Verify required parameters are present
-    required_params = ['input_dir', 'output_dir']
-    missing_params = [p for p in required_params if p not in config or not config[p]]
-    if missing_params:
-        print(f"Error: Missing required parameters: {', '.join(missing_params)}")
+    # Ensure directories exist
+    if not os.path.isdir(args.input):
+        print(f"Error: Input directory does not exist: {args.input}")
         sys.exit(1)
+    if not os.path.isdir(args.output):
+        # Attempt to create output directory if it doesn't exist
+        try:
+            os.makedirs(args.output, exist_ok=True)
+        except Exception as e:
+            print(f"Error: Could not create output directory {args.output}: {e}")
+            sys.exit(1)
 
-    # Now that we have output_dir, let's ensure logs go into output_dir
-    output_dir = config['output_dir']
-    # Change directory to output_dir so all logs are created there
-    if not os.path.isdir(output_dir):
-        print(f"Error: output_dir does not exist: {output_dir}")
-        sys.exit(1)
-
-    os.chdir(output_dir)
-
-    # Setup logging now that we know output_dir
+    # Set up logging in the output directory
+    log_file = os.path.join(args.output, 'HolmGenome.log')
     numeric_level = getattr(logging, args.log_level.upper(), None)
     if not isinstance(numeric_level, int):
         print(f'Invalid log level: {args.log_level}')
         sys.exit('Error: Invalid log level.')
-    setup_logging(log_level=numeric_level, log_file=os.path.join(output_dir, 'HolmGenome.log'))
+    setup_logging(log_level=numeric_level, log_file=log_file)
 
-    logging.info('Starting HolmGenome pipeline.')
-    logging.info('Configuration loaded successfully.')
+    logging.info('Starting HolmGenome pipeline with user-specified arguments.')
 
-    # List of tools to check
-    tools = [
-        'fastqc',
-        'java',  # For Trimmomatic
-        'spades.py',
-        'prokka',
-        'checkm',
-        'reformat.sh',  # Use system-installed version from BBMap module
-        'bbmap.sh',
-        'quast'
+    # If --check is used, just check required tools and exit
+    if args.check:
+        tools = [
+            'fastqc',
+            'java',  # For Trimmomatic
+            'spades.py',
+            'prokka',
+            'checkm',
+            'reformat.sh',  # from BBMap suite
+            'bbmap.sh',
+            'quast'
+        ]
+        check_required_tools(tools)
+        logging.info("Tool check completed successfully. Exiting as requested by --check.")
+        sys.exit(0)
+
+    # Proceed with the pipeline
+    # Prepare arguments for qc.py
+    qc_args = [
+        '--input_dir', args.input,
+        '--output_dir', args.output,
+        '--trimmomatic_path', args.trimmomatic_path,
+        '--adapters_path', args.adapters_path,
+        '--suffix1', '_R1_001',
+        '--suffix2', '_R2_001'
     ]
 
-    # Check for required tools before doing anything else
-    logging.info('Checking for required tools...')
-    check_required_tools(tools)
+    logging.info('Starting Quality Control step.')
+    qc_main(qc_args)
+    logging.info('Quality Control step completed successfully.')
 
-    try:
-        # Prepare arguments for qc.py
-        qc_args = [
-            '--input_dir', config['input_dir'],
-            '--output_dir', config['output_dir'],
-            '--trimmomatic_path', config['trimmomatic_path'],
-            '--adapters_path', config['adapters_path'],
-            '--suffix1', '_R1_001',
-            '--suffix2', '_R2_001'
-        ]
+    # Set the trimmed data path based on the QC output
+    trimmed_data_path = os.path.join(args.output, 'Trim_data')
 
-        logging.info('Starting Quality Control step.')
-        # Run Quality Control step
-        qc_main(qc_args)
-        logging.info('Quality Control step completed successfully.')
+    # Prepare arguments for assembly.py
+    assembly_args = [
+        '--output_dir', args.output,
+        '--spades_path', 'spades.py',  # Assuming spades_path from config or environment
+        '--quast_path', 'quast',
+        '--reformat_path', 'reformat.sh',
+        '--minlength', str(args.min_contig_length)
+    ]
 
-        # Set the trimmed data path based on the QC output
-        trimmed_data_path = os.path.join(config['output_dir'], 'Trim_data')
+    logging.info('Starting Assembly step.')
+    assembly_main(assembly_args)
+    logging.info('Assembly step completed successfully.')
 
-        # Prepare arguments for assembly.py
-        assembly_args = [
-            '--output_dir', config['output_dir'],
-            '--spades_path', config.get('spades_path', 'spades.py'),
-            '--quast_path', config.get('quast_path', 'quast'),
-            '--reformat_path', config.get('reformat_path', 'reformat.sh'),
-            '--minlength', str(config.get('min_contig_length', 1000))
-        ]
+    # Infer filtered_contigs_dir from output_dir
+    filtered_contigs_dir = os.path.join(args.output, 'Assembly', 'contigs', 'filtered_contigs')
 
-        logging.info('Starting Assembly step.')
-        # Run Assembly step
-        assembly_main(assembly_args)
-        logging.info('Assembly step completed successfully.')
+    # Prepare arguments for annotation.py
+    annotation_args = [
+        '--filtered_contigs_dir', filtered_contigs_dir,
+        '--output_dir', args.output
+    ]
 
-        # Infer filtered_contigs_dir from output_dir
-        filtered_contigs_dir = os.path.join(config['output_dir'], 'Assembly', 'contigs', 'filtered_contigs')
+    logging.info('Starting Annotation step.')
+    annotation_main(annotation_args)
+    logging.info('Annotation step completed successfully.')
 
-        # Prepare arguments for annotation.py
-        annotation_args = [
-            '--filtered_contigs_dir', filtered_contigs_dir,
-            '--output_dir', config['output_dir']
-        ]
-
-        logging.info('Starting Annotation step.')
-        # Run Annotation step
-        annotation_main(annotation_args)
-        logging.info('Annotation step completed successfully.')
-
-        logging.info('HolmGenome pipeline completed successfully.')
-
-    except Exception as e:
-        logging.exception('An exception occurred during pipeline execution.')
-        sys.exit(f"Error: {e}")
+    logging.info('HolmGenome pipeline completed successfully.')
 
 if __name__ == "__main__":
     main()
