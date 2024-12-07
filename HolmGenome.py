@@ -4,20 +4,20 @@ HolmGenome.py
 
 This script orchestrates the genome analysis pipeline, including quality control,
 assembly, and annotation steps.
--h, --help            show this help message and exit
-  -i INPUT, --input INPUT
-                        Path to the input directory
-  -o OUTPUT, --output OUTPUT
-                        Path to the output directory
-  --trimmomatic_path TRIMMOMATIC_PATH
-                        Path to the Trimmomatic executable or JAR
-  --adapters_path ADAPTERS_PATH
-                        Path to the adapters file
-  --prokka_db_path PROKKA_DB_PATH
-                        Path to the Prokka database
-  --min_contig_length MIN_CONTIG_LENGTH
-                        Minimum contig length (default: 1000)
-  --check               Check required tools and exit
+
+Usage:
+    python HolmGenome.py [options]
+
+Options:
+    -i, --input              Input directory path
+    -o, --output             Output directory path
+    --trimmomatic_path       Path to the Trimmomatic executable or JAR
+    --adapters_path          Path to the adapters file for Trimmomatic
+    --prokka_db_path         Path to the Prokka database
+    --min_contig_length      Minimum contig length (default: 1000)
+    --check                  Check if all dependencies are installed
+    -v, --version            Show pipeline version number and exit
+    -h, --help               Show this help message and exit
 """
 
 import subprocess
@@ -34,6 +34,8 @@ sys.path.append(src_dir)
 from qc import main as qc_main
 from assembly import main as assembly_main
 from annotation import main as annotation_main
+
+VERSION = "1.0.0"  # Set your pipeline version here
 
 def setup_logging(log_level=logging.INFO, log_file='HolmGenome.log'):
     logging.basicConfig(
@@ -87,9 +89,13 @@ def main():
     parser.add_argument('--min_contig_length', default='1000', help='Minimum contig length (default: 1000)')
     parser.add_argument('--check', action='store_true', help='Check if all dependencies are installed')
 
+    # Add version argument
+    parser.add_argument('-v', '--version', action='version',
+                        version=f"HolmGenome pipeline version {VERSION}",
+                        help='Show pipeline version number and exit')
+
     args = parser.parse_args()
 
-    # Prompt if missing
     if not args.input:
         args.input = input("Enter the input directory: ").strip()
     if not args.output:
@@ -111,7 +117,6 @@ def main():
             print(f"Error: Could not create output directory {args.output}: {e}")
             sys.exit(1)
 
-    # Set up logging in the output directory
     log_file = os.path.join(args.output, 'HolmGenome.log')
     setup_logging(log_file=log_file)
 
@@ -132,7 +137,8 @@ def main():
         logging.info("Dependencies check completed successfully.")
         sys.exit(0)
 
-        qc_args_raw = [
+    # Run QC on raw data
+    qc_args_raw = [
         '--input_dir', args.input,
         '--output_dir', args.output,
         '--trimmomatic_path', args.trimmomatic_path,
@@ -144,6 +150,7 @@ def main():
     qc_main(qc_args_raw)
     logging.info('Quality Control on raw data completed successfully.')
 
+    # QC on trimmed data
     trimmed_data_path = os.path.join(args.output, 'Trim_data')
     qc_args_trimmed = [
         '--input_dir', trimmed_data_path,
@@ -154,10 +161,12 @@ def main():
         '--suffix2', '_R2_paired',
         '--skip_trim'
     ]
+
     logging.info('Starting Quality Control on trimmed reads.')
     qc_main(qc_args_trimmed)
     logging.info('Quality Control on trimmed reads completed successfully.')
 
+    # Assembly
     assembly_args = [
         '--output_dir', args.output,
         '--spades_path', 'spades.py',
@@ -171,6 +180,7 @@ def main():
 
     filtered_contigs_dir = os.path.join(args.output, 'Assembly', 'contigs', 'filtered_contigs')
 
+    # Annotation
     annotation_args = [
         '--filtered_contigs_dir', filtered_contigs_dir,
         '--output_dir', args.output
