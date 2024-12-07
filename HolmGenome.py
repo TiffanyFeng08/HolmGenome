@@ -3,8 +3,7 @@
 HolmGenome.py
 
 This script orchestrates the genome analysis pipeline, including quality control,
-assembly, and annotation steps. It uses command-line arguments instead of a YAML file.
-Now it calls qc_main twice to run QC on trimmed reads as well.
+assembly, and annotation steps. 
 Usage:
     python HolmGenome.py [options]
 
@@ -55,13 +54,10 @@ def setup_logging(log_level=logging.INFO, log_file='HolmGenome.log'):
 
 def check_tool(tool):
     tool_name = os.path.basename(tool)
-    if os.path.isabs(tool):
-        tool_path = tool
-    else:
-        tool_path = shutil.which(tool)
-        if tool_path is None:
-            print(f"Error: {tool_name} not found in PATH.")
-            sys.exit(1)
+    tool_path = shutil.which(tool)
+    if tool_path is None:
+        print(f"Error: {tool_name} not found in PATH.")
+        sys.exit(1)
 
     if not os.access(tool_path, os.X_OK):
         print(f"Error: {tool_name} is not executable.")
@@ -94,7 +90,6 @@ def main():
     parser.add_argument('--trimmomatic_path', help='Path to the Trimmomatic executable or JAR')
     parser.add_argument('--adapters_path', help='Path to the adapters file')
     parser.add_argument('--prokka_db_path', help='Path to the Prokka database')
-    parser.add_argument('--fastqc_path', help='Path to the FastQC executable')
     parser.add_argument('--min_contig_length', default='100', help='Minimum contig length (default: 100)')
     parser.add_argument('--check', action='store_true', help='Check required tools and exit')
     parser.add_argument('--log_level', default='INFO', help='Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)')
@@ -112,8 +107,6 @@ def main():
         args.adapters_path = input("Enter the adapters file path: ").strip()
     if not args.prokka_db_path:
         args.prokka_db_path = input("Enter the Prokka database path: ").strip()
-    if not args.fastqc_path:
-        args.fastqc_path = input("Enter the FastQC path: ").strip()
 
     # Ensure directories exist
     if not os.path.isdir(args.input):
@@ -145,7 +138,7 @@ def main():
             'spades.py',
             'prokka',
             'checkm',
-            'reformat.sh',  # from BBMap suite
+            'reformat.sh',
             'bbmap.sh',
             'quast'
         ]
@@ -154,42 +147,39 @@ def main():
         sys.exit(0)
 
     # Proceed with the pipeline
-    # Prepare arguments for qc.py (first run on raw data)
-    qc_args = [
+    # qc_args for raw data
+    qc_args_raw = [
         '--input_dir', args.input,
         '--output_dir', args.output,
         '--trimmomatic_path', args.trimmomatic_path,
         '--adapters_path', args.adapters_path,
-        '--fastqc_path', args.fastqc_path,
         '--suffix1', '_R1_001',
         '--suffix2', '_R2_001'
     ]
 
-    logging.info('Starting Quality Control step on raw data.')
-    qc_main(qc_args)
+    logging.info('Starting Quality Control on raw data.')
+    qc_main(qc_args_raw)
     logging.info('Quality Control on raw data completed successfully.')
 
     # Set the trimmed data path based on the QC output
     trimmed_data_path = os.path.join(args.output, 'Trim_data')
 
-    # Run qc_main again for trimmed reads
-    # This second call runs fastqc on trimmed data. We don't need trimming again, so no trimmomatic args needed.
-    # Just ensure qc.py knows to run fastqc on existing trimmed data.
-    # If qc.py requires special arguments to skip trimming, add them, otherwise assume it runs fastqc only.
+    # qc_args for trimmed data (second run)
+    # Just run fastqc on trimmed data, no trimming needed second time
+    # Assuming qc.py runs fastqc if no trimmomatic args given
     qc_args_trimmed = [
         '--input_dir', trimmed_data_path,
-        '--output_dir', args.output,
-        '--fastqc_path', args.fastqc_path
+        '--output_dir', args.output
     ]
 
-    logging.info('Starting Quality Control step on trimmed reads.')
+    logging.info('Starting Quality Control on trimmed reads.')
     qc_main(qc_args_trimmed)
     logging.info('Quality Control on trimmed reads completed successfully.')
 
     # Prepare arguments for assembly.py
     assembly_args = [
         '--output_dir', args.output,
-        '--spades_path', 'spades.py',  # or args.spades_path if needed
+        '--spades_path', 'spades.py',
         '--quast_path', 'quast',
         '--reformat_path', 'reformat.sh',
         '--minlength', str(args.min_contig_length)
