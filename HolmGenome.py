@@ -13,7 +13,7 @@ Options:
     --trimmomatic_path       Path to the Trimmomatic executable or JAR
     --adapters_path          Path to the adapters file for Trimmomatic
     --prokka_db_path         Path to the Prokka database
-    --min_contig_length      Minimum contig length (default: 100)
+    --min_contig_length      Minimum contig length (default: 1000)
     --check                  Check required tools and exit
     -h, --help               Show this help message and exit
 
@@ -90,7 +90,7 @@ def main():
     parser.add_argument('--trimmomatic_path', help='Path to the Trimmomatic executable or JAR')
     parser.add_argument('--adapters_path', help='Path to the adapters file')
     parser.add_argument('--prokka_db_path', help='Path to the Prokka database')
-    parser.add_argument('--min_contig_length', default='100', help='Minimum contig length (default: 100)')
+    parser.add_argument('--min_contig_length', default='1000', help='Minimum contig length (default: 1000)')
     parser.add_argument('--check', action='store_true', help='Check required tools and exit')
     parser.add_argument('--log_level', default='INFO', help='Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)')
 
