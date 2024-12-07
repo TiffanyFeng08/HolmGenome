@@ -3,7 +3,7 @@
 HolmGenome.py
 
 This script orchestrates the genome analysis pipeline, including quality control,
-assembly, and annotation steps. 
+assembly, and annotation steps.
 Usage:
     python HolmGenome.py [options]
 
@@ -26,7 +26,6 @@ import logging
 import argparse
 import shutil
 
-# Adjust the Python path to include the 'src' directory
 script_dir = os.path.dirname(os.path.abspath(__file__))
 src_dir = os.path.join(script_dir, 'src')
 sys.path.append(src_dir)
@@ -36,16 +35,12 @@ from assembly import main as assembly_main
 from annotation import main as annotation_main
 
 def setup_logging(log_level=logging.INFO, log_file='HolmGenome.log'):
-    """
-    Configure logging for the script.
-    """
     logging.basicConfig(
         filename=log_file,
         filemode='a',
         level=log_level,
         format='%(asctime)s - %(levelname)s - %(message)s'
     )
-    # Also log to console
     console = logging.StreamHandler()
     console.setLevel(log_level)
     formatter = logging.Formatter('%(levelname)s - %(message)s')
@@ -58,11 +53,9 @@ def check_tool(tool):
     if tool_path is None:
         print(f"Error: {tool_name} not found in PATH.")
         sys.exit(1)
-
     if not os.access(tool_path, os.X_OK):
         print(f"Error: {tool_name} is not executable.")
         sys.exit(1)
-
     commands_to_try = [['--version'], ['-v'], ['-h'], ['--help']]
     for cmd_args in commands_to_try:
         try:
@@ -108,19 +101,16 @@ def main():
     if not args.prokka_db_path:
         args.prokka_db_path = input("Enter the Prokka database path: ").strip()
 
-    # Ensure directories exist
     if not os.path.isdir(args.input):
         print(f"Error: Input directory does not exist: {args.input}")
         sys.exit(1)
     if not os.path.isdir(args.output):
-        # Attempt to create output directory if it doesn't exist
         try:
             os.makedirs(args.output, exist_ok=True)
         except Exception as e:
             print(f"Error: Could not create output directory {args.output}: {e}")
             sys.exit(1)
 
-    # Set up logging in the output directory
     log_file = os.path.join(args.output, 'HolmGenome.log')
     numeric_level = getattr(logging, args.log_level.upper(), None)
     if not isinstance(numeric_level, int):
@@ -130,7 +120,6 @@ def main():
 
     logging.info('Starting HolmGenome pipeline with user-specified arguments.')
 
-    # If --check is used, just check required tools and exit
     if args.check:
         tools = [
             'fastqc',
@@ -146,7 +135,6 @@ def main():
         logging.info("Tool check completed successfully. Exiting as requested by --check.")
         sys.exit(0)
 
-    # Proceed with the pipeline
     # qc_args for raw data
     qc_args_raw = [
         '--input_dir', args.input,
@@ -161,15 +149,19 @@ def main():
     qc_main(qc_args_raw)
     logging.info('Quality Control on raw data completed successfully.')
 
-    # Set the trimmed data path based on the QC output
+    # trimmed_data_path
     trimmed_data_path = os.path.join(args.output, 'Trim_data')
 
-    # qc_args for trimmed data (second run)
-    # Just run fastqc on trimmed data, no trimming needed second time
-    # Assuming qc.py runs fastqc if no trimmomatic args given
+    # qc_args for trimmed data
+    # Since qc.py requires --trimmomatic_path and --adapters_path as mandatory arguments,
+    # We must provide them again to avoid argument parsing errors, even if we don't trim again.
     qc_args_trimmed = [
         '--input_dir', trimmed_data_path,
-        '--output_dir', args.output
+        '--output_dir', args.output,
+        '--trimmomatic_path', args.trimmomatic_path, # required by qc.py parser
+        '--adapters_path', args.adapters_path,       # required by qc.py parser
+        '--suffix1', '_R1_001',
+        '--suffix2', '_R2_001'
     ]
 
     logging.info('Starting Quality Control on trimmed reads.')
