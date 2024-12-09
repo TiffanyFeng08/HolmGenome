@@ -1,6 +1,6 @@
 # HolmGenome Pipeline
 
-**HolmGenome** is a one-step pipeline that performs **assembly**, **quality control**, and **annotation** of genomic data. It takes raw sequencing reads and produces a fully annotated genome in a single run.
+**HolmGenome** is a one-step pipeline that performs **assembly**, **quality control**, and **annotation** of bacteria genomic data. It takes raw sequencing reads and produces a fully annotated genome in a single run.
 
 ## Features
 - **Assembly:** Uses SPAdes to assemble raw reads.
