@@ -52,7 +52,7 @@ module load bbmap/38.86
 module load quast/5.2.0
 source ~/HolmGenome/bin/activate
 
-python HolmGenome.py -i /lustre04/scratch/zhangbin/HolmGenome/data -o /lustre04/scratch/zhangbin/HolmGenome/data/output \
+python HolmGenome.py -i /path/to/data -o /path/to/output \
 --trimmomatic_path $EBROOTTRIMMOMATIC/trimmomatic-0.39.jar \
 --adapters_path /lustre04/scratch/zhangbin/db/adapters.fa \
 --prokka_db_path $EBROOTPROKKA/db 
