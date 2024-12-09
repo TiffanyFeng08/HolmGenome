@@ -4,8 +4,8 @@
 #SBATCH --job-name=HolmGenome
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --mem-per-cpu=10G
-#SBATCH --cpus-per-task=10
+#SBATCH --mem-per-cpu=5G
+#SBATCH --cpus-per-task=4
 #SBATCH --mail-user=zhangbin.cai@mail.mcgill.ca
 #SBATCH --mail-type=BEGIN,END,FAIL,REQUEUE
 
@@ -20,4 +20,7 @@ module load bbmap/38.86
 module load quast/5.2.0
 source ~/HolmGenome/bin/activate
 
-python HolmGenome.py --config config.yaml
+python HolmGenome.py -i /lustre04/scratch/zhangbin/HolmGenome/data -o /lustre04/scratch/zhangbin/HolmGenome/data/output \
+--trimmomatic_path $EBROOTTRIMMOMATIC/trimmomatic-0.39.jar \
+--adapters_path /lustre04/scratch/zhangbin/db/adapters.fa \
+--prokka_db_path $EBROOTPROKKA/db 

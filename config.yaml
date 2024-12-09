@@ -9,11 +9,11 @@ trimmomatic_path: '$EBROOTTRIMMOMATIC/trimmomatic-0.39.jar'
 adapters_path: '/lustre04/scratch/zhangbin/db/adapters.fa'
 
 #adapters_path: '/lustre04/scratch/zhangbin/db/adapters.fa'
-fastqc_path: 'fastqc'
+# fastqc_path: 'fastqc'
 # multiqc_path: 'multiqc'
 # --prokka_path: 'prokka'
 --prokka_db_path: '/lustre04/scratch/zhangbin/db/prokka/prokka_db'
 min_contig_length: 1000
-filtered_contigs_dir: '/lustre04/scratch/zhangbin/HolmGenome/data'
-annotation_output_dir: '/lustre04/scratch/zhangbin/HolmGenome/data'
+# filtered_contigs_dir: '/lustre04/scratch/zhangbin/HolmGenome/data'
+# annotation_output_dir: '/lustre04/scratch/zhangbin/HolmGenome/data'
 
