@@ -54,6 +54,6 @@ source ~/HolmGenome/bin/activate
 
 python HolmGenome.py -i /path/to/data -o /path/to/output \
 --trimmomatic_path $EBROOTTRIMMOMATIC/trimmomatic-0.39.jar \
---adapters_path /lustre04/scratch/zhangbin/db/adapters.fa \
+--adapters_path /path/to/adapters.fa \
 --prokka_db_path $EBROOTPROKKA/db 
 ```
