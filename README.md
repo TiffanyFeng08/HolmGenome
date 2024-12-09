@@ -53,7 +53,7 @@ module load quast/5.2.0
 source ~/HolmGenome/bin/activate
 
 python HolmGenome.py -i /path/to/data -o /path/to/output \
---trimmomatic_path $EBROOTTRIMMOMATIC/trimmomatic-0.39.jar \
+--trimmomatic_path /path/to/trimmomatic-0.39.jar \
 --adapters_path /path/to/adapters.fa \
---prokka_db_path $EBROOTPROKKA/db 
+--prokka_db_path /path/to/prokka_db 
 ```
