@@ -23,6 +23,12 @@
 git clone https://github.com/TiffanyFeng08/HolmGenome.git
 
 ``` 
+### Check the environment before using (recommended)
+```
+cd HolmGenome
+python HolmGenome.py --check
+```
+
 ## Usage 
 HolmGenome.py will detect all *.fastq or *.fastq.gz files in a directory and run the assembly pipeline on each sample it can pair
 
