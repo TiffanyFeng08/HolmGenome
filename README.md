@@ -23,8 +23,31 @@
 ```bash
 git clone https://github.com/TiffanyFeng08/HolmGenome.git
 
-```
+``` 
 ## Usage 
+HolmGenome.py will detect all *.fastq or *.fastq.gz files in a directory and run the assembly pipeline on each sample it can pair
+
+```
+Usage: HolmGenome.py [OPTIONS]
+options:
+  -h, --help            show this help message and exit
+  -i INPUT, --input INPUT
+                        Path to the input directory
+  -o OUTPUT, --output OUTPUT
+                        Path to the output directory
+  --trimmomatic_path TRIMMOMATIC_PATH
+                        Path to the Trimmomatic executable or JAR
+  --adapters_path ADAPTERS_PATH
+                        Path to the adapters file
+  --prokka_db_path PROKKA_DB_PATH
+                        Path to the Prokka database
+  --min_contig_length MIN_CONTIG_LENGTH
+                        Minimum contig length (default: 1000)
+  --check               Check if all dependencies are installed
+  -v, --version         Show the pipeline version number and exit
+
+``` 
+
 ```
 python HolmGenome.py -i INPUT -o OUTPUT --trimmomatic_path TRIMMOMATIC_PATH --adapters_path ADAPTERS_PATH --prokka_db_path PROKKA_DB_PATH
 ```
