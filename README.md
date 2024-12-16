@@ -30,7 +30,7 @@ python HolmGenome.py --check
 ```
 
 ## Usage 
-HolmGenome.py will detect all *.fastq or *.fastq.gz files in a directory and run the assembly pipeline on each sample it can pair
+HolmGenome.py will detect all *.fastq or *.fastq.gz files in a directory and run on each sample it can pair
 
 ```
 Usage: HolmGenome.py [OPTIONS]
