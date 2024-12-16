@@ -35,7 +35,7 @@ HolmGenome.py will detect all *.fastq or *.fastq.gz files in a directory and run
 ```
 Usage: HolmGenome.py [OPTIONS]
 options:
-  -h, --help            show this help message and exit
+  -h, --help            show help message and exit
   -i INPUT, --input INPUT
                         Path to the input directory
   -o OUTPUT, --output OUTPUT
