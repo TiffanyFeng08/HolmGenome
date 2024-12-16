@@ -11,13 +11,12 @@
 ### Requirements
 - **Python Version:** Python 3.6 or higher
 - **External Dependencies:**
-- fastqc
-- trimmomatic
-- spades.py
-- prokka
-- checkm
-- quast
-- bbmap
+- **FastQC**: 0.12.0
+- **Trimmomatic**: 0.39
+- **SPAdes**: 3.15.4
+- **Prokka**: 1.14.5
+- **BBMap**: 38.86
+- **QUAST**: 5.2.0
 
 ### Development Version
 ```bash
