@@ -178,11 +178,9 @@ def main(argv=None):
     setup_directories(args.output_dir)
 
     if args.skip_trim:
-        # Just run FastQC on the given input_dir (assume trimmed reads here)
         trimmed_data_qc_dir = os.path.join(args.output_dir, 'QC', 'Trim')
         run_fastqc(args.fastqc_path, args.input_dir, trimmed_data_qc_dir)
     else:
-        # Normal operation: pair files, trim, run fastqc on raw and trimmed
         paired_files = pair_fastq_files(args.input_dir, args.suffix1, args.suffix2)
         process_samples(args, paired_files)
 
@@ -193,9 +191,6 @@ def main(argv=None):
         # FastQC on raw data
         run_fastqc(args.fastqc_path, args.input_dir, raw_data_qc_dir)
 
-        # For trimmed reads in subdirectories with `_R1_paired` and `_R2_paired`
-        # If needed, run qc.py again with --skip_trim and updated suffixes.
-        # But we can also just rely on run_fastqc to find fastqs recursively:
         trimmed_data_path = os.path.join(args.output_dir, 'Trim_data')
         run_fastqc(args.fastqc_path, trimmed_data_path, trimmed_data_qc_dir)
 

@@ -103,7 +103,7 @@ def main():
     # Setup a minimal logging before checks (no directories needed)
     setup_logging()
 
-    # If --check is used, run check_required_tools and exit immediately
+    
     if args.check:
         tools = [
             'fastqc',
@@ -119,8 +119,6 @@ def main():
         logging.info("Dependencies check completed successfully.")
         sys.exit(0)
 
-    # Now if we reach here, it means no --check was given
-    # Now we can prompt for directories and paths
     if not args.input:
         args.input = input("Enter the input directory: ").strip()
     if not args.output:
