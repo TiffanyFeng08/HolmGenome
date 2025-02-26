@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+title: HolmGenome Pipeline
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Zhixuan
+    family-names: Feng
+  - given-names: Zhangbin
+    family-names: Cai
+url: 'https://github.com/TiffanyFeng08/HolmGenome'
+abstract: >-
+  HolmGenome is a one-step pipeline that performs assembly,
+  quality control, and annotation of bacteria genomic data.
+  It takes raw sequencing reads and produces a fully
+  annotated genome in a single run.
+license: MIT
